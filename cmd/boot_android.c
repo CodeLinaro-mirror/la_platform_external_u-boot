@@ -5,9 +5,9 @@
  */
 
 #include <android_bootloader.h>
-#include <android_cmds.h>
 #include <common.h>
 #include <command.h>
+#include <part.h>
 
 static int do_boot_android(cmd_tbl_t *cmdtp, int flag, int argc,
 			   char * const argv[])
@@ -17,6 +17,8 @@ static int do_boot_android(cmd_tbl_t *cmdtp, int flag, int argc,
 	char *addr_arg_endp, *addr_str;
 	struct blk_desc *dev_desc;
 	disk_partition_t part_info;
+	const char *misc_part_iface;
+	const char *misc_part_desc;
 
 	if (argc < 4)
 		return CMD_RET_USAGE;
@@ -35,10 +37,14 @@ static int do_boot_android(cmd_tbl_t *cmdtp, int flag, int argc,
 			load_address = CONFIG_SYS_LOAD_ADDR;
 	}
 
-	if (part_get_info_by_dev_and_name_or_num(argv[1], argv[2],
-						 &dev_desc, &part_info) < 0) {
+	/* Lookup the "misc" partition from argv[1] and argv[2] */
+	misc_part_iface = argv[1];
+	misc_part_desc = argv[2];
+	/* Split the part_name if passed as "$dev_num;part_name". */
+	if (part_get_info_by_dev_and_name_or_num(misc_part_iface,
+						 misc_part_desc,
+						 &dev_desc, &part_info) < 0)
 		return CMD_RET_FAILURE;
-	}
 
 	ret = android_bootloader_boot_flow(dev_desc, &part_info, argv[3],
 					   load_address);
