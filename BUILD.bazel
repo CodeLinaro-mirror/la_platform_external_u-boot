@@ -126,6 +126,32 @@ copy_to_dist_dir(
 )
 
 kernel_build(
+    name = "crosvm_x86",
+    outs = [
+        "System.map",
+        "u-boot",
+        "u-boot.rom",
+    ],
+    arch = "x86_64",
+    build_config = "build.config.crosvm.x86",
+    deps = [
+        "//prebuilts/gcc/linux-x86/x86/x86_64-linux-android-4.9:binaries",
+    ],
+)
+
+kernel_compile_commands(
+    name = "crosvm_x86_compile_commands",
+    kernel_build = ":crosvm_x86",
+)
+
+copy_to_dist_dir(
+    name = "crosvm_x86_dist",
+    data = [":crosvm_x86"],
+    dist_dir = "out/u-boot/dist",
+    flat = True,
+)
+
+kernel_build(
     name = "crosvm_x86_64",
     outs = [
         "System.map",
