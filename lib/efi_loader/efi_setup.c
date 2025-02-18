@@ -10,6 +10,7 @@
 
 #include <efi_driver.h>
 #include <efi_gbl_ab.h>
+#include <efi_gbl_fastboot.h>
 #include <efi_gbl_image_loading.h>
 #include <efi_gbl_os_configuration.h>
 #include <efi_loader.h>
@@ -354,6 +355,14 @@ efi_status_t efi_init_obj_list(void)
 		ret = efi_gbl_ab_register();
 		if (ret != EFI_SUCCESS) {
 			log_err("AB_PROTOCOL initialization error\n");
+			goto out;
+		}
+	}
+
+	if (IS_ENABLED(CONFIG_EFI_GBL_FASTBOOT_PROTOCOL)) {
+		ret = efi_gbl_fastboot_register();
+		if (ret != EFI_SUCCESS) {
+			log_err("GBL Fastboot Protocol initialization error\n");
 			goto out;
 		}
 	}

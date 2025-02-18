@@ -50,6 +50,7 @@ efi_selftest_variables_runtime.o \
 efi_selftest_watchdog.o
 
 obj-$(CONFIG_EFI_GBL_AB_PROTOCOL) += efi_selftest_gbl_ab_protocol.o
+obj-$(CONFIG_EFI_GBL_FASTBOOT_PROTOCOL) += efi_selftest_gbl_fastboot_protocol.o
 
 obj-$(CONFIG_EFI_ECPT) += efi_selftest_ecpt.o
 obj-$(CONFIG_NETDEVICES) += efi_selftest_snp.o

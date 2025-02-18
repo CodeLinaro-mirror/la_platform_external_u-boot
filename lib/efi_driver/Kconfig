@@ -17,6 +17,14 @@ config EFI_GBL_AB_PROTOCOL
 	  marking boot attempts, changing the currently active slot,
 	  and querying metadata about boot slots.
 
+config EFI_GBL_FASTBOOT_PROTOCOL
+	bool "Include GBL Fastboot customization protocol"
+	depends on EFI_LOADER
+	help
+	  Include the driver for the custom GBL Fastboot customization protocol.
+	  This protocol is used for defining custom fastboot variables,
+	  custom oem commands, and driving a device-local bootloader session.
+
 config EFI_GBL_OS_CONFIGURATION_PROTOCOL
 	bool "Include GBL Os Configuration protocol"
 	depends on EFI_LOADER
