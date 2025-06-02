@@ -16,6 +16,12 @@ PYLIBFDT_srcs = $(addprefix $(LIBFDT_srcdir)/,$(LIBFDT_SRCS)) \
 # create a version string compliant with PEP 440
 PEP_VERSION = $(VERSION)$(if $(PATCHLEVEL),.$(PATCHLEVEL)$(if $(SUBLEVEL),.$(SUBLEVEL)))$(subst -,,$(EXTRAVERSION))
 
+# HACK: Android u-boot uses packaged Python3 in clang, which doesn't have correct get_python_inc().
+#   Fix it.
+PYMOD_INCLUDE_DIRS = --include-dirs=$(subst $(eval ),:,$(wildcard $(dir $(realpath $(shell which $(PYTHON3))))../include/python3*))
+# HACK: The double $$ in HOSTLDFLAGS becomes PID in shell. Fix it.
+HOSTLDFLAGS := $(subst $$$$,$$,$(HOSTLDFLAGS))
+
 quiet_cmd_pymod = PYMOD   $@
       cmd_pymod = unset CROSS_COMPILE; unset CFLAGS; \
 		CC="$(HOSTCC)" LDSHARED="$(HOSTCC) -shared " \
@@ -24,7 +30,7 @@ quiet_cmd_pymod = PYMOD   $@
 		CPPFLAGS="$(HOSTCFLAGS) -I$(LIBFDT_srcdir) -Wno-self-assign -Wno-sign-compare" OBJDIR=$(obj) \
 		SOURCES="$(PYLIBFDT_srcs)" \
 		SWIG_OPTS="-I$(LIBFDT_srcdir) -I$(LIBFDT_srcdir)/.." \
-		$(PYTHON3) $< --quiet build_ext --inplace
+		$(PYTHON3) $< --quiet build_ext --inplace $(PYMOD_INCLUDE_DIRS)
 
 rebuild: $(src)/setup.py $(PYLIBFDT_srcs)
 	@# Remove the library since otherwise Python doesn't seem to regenerate
