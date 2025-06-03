@@ -1,6 +1,7 @@
 load("@kernel_toolchain_info//:dict.bzl", "CLANG_VERSION")
+load("@rules_pkg//pkg:install.bzl", "pkg_install")
+load("@rules_pkg//pkg:mappings.bzl", "pkg_files", "strip_prefix")
 load("@rules_python//python:py_runtime_pair.bzl", "py_runtime_pair")
-load("//build/bazel_common_rules/dist:dist.bzl", "copy_to_dist_dir")
 load("//build/kernel/kleaf:kernel.bzl", "kernel_build", "kernel_compile_commands")
 
 kernel_build(
@@ -15,11 +16,17 @@ kernel_build(
     ],
 )
 
-copy_to_dist_dir(
+pkg_files(
+    name = "beagle_x15_dist_files",
+    srcs = [":beagle_x15"],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
     name = "beagle_x15_dist",
-    data = [":beagle_x15"],
-    dist_dir = "out/u-boot/dist",
-    flat = True,
+    srcs = [":beagle_x15_dist_files"],
+    destdir = "out/u-boot/dist",
 )
 
 kernel_build(
@@ -40,11 +47,17 @@ kernel_compile_commands(
     kernel_build = ":crosvm_aarch64",
 )
 
-copy_to_dist_dir(
+pkg_files(
+    name = "crosvm_aarch64_dist_files",
+    srcs = [":crosvm_aarch64"],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
     name = "crosvm_aarch64_dist",
-    data = [":crosvm_aarch64"],
-    dist_dir = "out/u-boot/dist",
-    flat = True,
+    srcs = [":crosvm_aarch64_dist_files"],
+    destdir = "out/u-boot/dist",
 )
 
 kernel_build(
@@ -66,11 +79,17 @@ kernel_compile_commands(
     kernel_build = ":kiwi",
 )
 
-copy_to_dist_dir(
+pkg_files(
+    name = "kiwi_dist_files",
+    srcs = [":kiwi"],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
     name = "kiwi_dist",
-    data = [":kiwi"],
-    dist_dir = "out/u-boot/dist",
-    flat = True,
+    srcs = [":kiwi_dist_files"],
+    destdir = "out/u-boot/dist",
 )
 
 kernel_build(
@@ -92,11 +111,17 @@ kernel_compile_commands(
     kernel_build = ":kiwi_p",
 )
 
-copy_to_dist_dir(
+pkg_files(
+    name = "kiwi_p_dist_files",
+    srcs = [":kiwi_p"],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
     name = "kiwi_p_dist",
-    data = [":kiwi_p"],
-    dist_dir = "out/u-boot/dist",
-    flat = True,
+    srcs = [":kiwi_p_dist_files"],
+    destdir = "out/u-boot/dist",
 )
 
 kernel_build(
@@ -118,11 +143,17 @@ kernel_compile_commands(
     kernel_build = ":qemu_x86_64",
 )
 
-copy_to_dist_dir(
+pkg_files(
+    name = "qemu_x86_64_dist_files",
+    srcs = [":qemu_x86_64"],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
     name = "qemu_x86_64_dist",
-    data = [":qemu_x86_64"],
-    dist_dir = "out/u-boot/dist",
-    flat = True,
+    srcs = [":qemu_x86_64_dist_files"],
+    destdir = "out/u-boot/dist",
 )
 
 kernel_build(
@@ -144,11 +175,17 @@ kernel_compile_commands(
     kernel_build = ":crosvm_x86",
 )
 
-copy_to_dist_dir(
+pkg_files(
+    name = "crosvm_x86_dist_files",
+    srcs = [":crosvm_x86"],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
     name = "crosvm_x86_dist",
-    data = [":crosvm_x86"],
-    dist_dir = "out/u-boot/dist",
-    flat = True,
+    srcs = [":crosvm_x86_dist_files"],
+    destdir = "out/u-boot/dist",
 )
 
 kernel_build(
@@ -170,11 +207,17 @@ kernel_compile_commands(
     kernel_build = ":crosvm_x86_64",
 )
 
-copy_to_dist_dir(
+pkg_files(
+    name = "crosvm_x86_64_dist_files",
+    srcs = [":crosvm_x86_64"],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
     name = "crosvm_x86_64_dist",
-    data = [":crosvm_x86_64"],
-    dist_dir = "out/u-boot/dist",
-    flat = True,
+    srcs = [":crosvm_x86_64_dist_files"],
+    destdir = "out/u-boot/dist",
 )
 
 kernel_build(
@@ -195,11 +238,17 @@ kernel_compile_commands(
     kernel_build = ":gem5_aarch64",
 )
 
-copy_to_dist_dir(
+pkg_files(
+    name = "gem5_aarch64_dist_files",
+    srcs = [":gem5_aarch64"],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
     name = "gem5_aarch64_dist",
-    data = [":gem5_aarch64"],
-    dist_dir = "out/u-boot/dist",
-    flat = True,
+    srcs = [":gem5_aarch64_dist_files"],
+    destdir = "out/u-boot/dist",
 )
 
 kernel_build(
@@ -220,11 +269,17 @@ kernel_compile_commands(
     kernel_build = ":qemu_aarch64",
 )
 
-copy_to_dist_dir(
+pkg_files(
+    name = "qemu_aarch64_dist_files",
+    srcs = [":qemu_aarch64"],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
     name = "qemu_aarch64_dist",
-    data = [":qemu_aarch64"],
-    dist_dir = "out/u-boot/dist",
-    flat = True,
+    srcs = [":qemu_aarch64_dist_files"],
+    destdir = "out/u-boot/dist",
 )
 
 kernel_build(
@@ -246,11 +301,17 @@ kernel_compile_commands(
     kernel_build = ":qemu_arm",
 )
 
-copy_to_dist_dir(
+pkg_files(
+    name = "qemu_arm_dist_files",
+    srcs = [":qemu_arm"],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
     name = "qemu_arm_dist",
-    data = [":qemu_arm"],
-    dist_dir = "out/u-boot/dist",
-    flat = True,
+    srcs = [":qemu_arm_dist_files"],
+    destdir = "out/u-boot/dist",
 )
 
 kernel_build(
@@ -264,11 +325,17 @@ kernel_build(
     build_config = "build.config.qemu.riscv64",
 )
 
-copy_to_dist_dir(
+pkg_files(
+    name = "qemu_riscv64_dist_files",
+    srcs = [":qemu_riscv64"],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
     name = "qemu_riscv64_dist",
-    data = [":qemu_riscv64"],
-    dist_dir = "out/u-boot/dist",
-    flat = True,
+    srcs = [":qemu_riscv64_dist_files"],
+    destdir = "out/u-boot/dist",
 )
 
 kernel_build(
@@ -283,11 +350,17 @@ kernel_build(
     ],
 )
 
-copy_to_dist_dir(
+pkg_files(
+    name = "rockpi4_dist_files",
+    srcs = [":rockpi4"],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
     name = "rockpi4_dist",
-    data = [":rockpi4"],
-    dist_dir = "out/u-boot-mainline/dist",
-    flat = True,
+    srcs = [":rockpi4_dist_files"],
+    destdir = "out/u-boot-mainline/dist",
 )
 
 kernel_build(
@@ -303,11 +376,17 @@ kernel_build(
     ],
 )
 
-copy_to_dist_dir(
+pkg_files(
+    name = "xen_aarch64_dist_files",
+    srcs = [":xen_aarch64"],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
     name = "xen_aarch64_dist",
-    data = [":xen_aarch64"],
-    dist_dir = "out/u-boot/dist",
-    flat = True,
+    srcs = [":xen_aarch64_dist_files"],
+    destdir = "out/u-boot/dist",
 )
 
 # Use SWIG enabled Python
