@@ -37,11 +37,6 @@ typedef struct efi_image_loading_protocol {
 	efi_status_t(EFIAPI *get_buffer)(struct efi_image_loading_protocol *,
 					 const gbl_image_info * /* in param */,
 					 gbl_image_buffer * /* in-out param */);
-
-	efi_status_t(EFIAPI *get_verify_partitions)(
-		struct efi_image_loading_protocol *,
-		size_t * /* in-out param */,
-		gbl_partition_name * /* in-out param */);
 } efi_image_loading_protocol;
 
 efi_status_t efi_gbl_image_loading_register(void);

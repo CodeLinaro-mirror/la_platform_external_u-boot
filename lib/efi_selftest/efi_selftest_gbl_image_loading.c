@@ -31,18 +31,12 @@ static int setup(const efi_handle_t handle,
 	return EFI_ST_SUCCESS;
 }
 
-int execute_get_verify_partitions(void);
 int execute_get_buffer_known(void);
 int execute_get_buffer_unknown(void);
 
 static int execute(void)
 {
 	efi_status_t res;
-
-	res = execute_get_verify_partitions();
-	if (res != EFI_SUCCESS) {
-		return res;
-	}
 
 	res = execute_get_buffer_known();
 	if (res != EFI_SUCCESS) {
@@ -54,24 +48,6 @@ static int execute(void)
 		return res;
 	}
 
-	return EFI_SUCCESS;
-}
-
-int execute_get_verify_partitions(void)
-{
-	size_t partitions_count = 1;
-	gbl_partition_name partitions;
-	efi_status_t res = protocol->get_verify_partitions(
-		protocol, &partitions_count, &partitions);
-	if (res != EFI_SUCCESS) {
-		efi_st_error("Failed to get verify partitions: %lu\n", res);
-		return EFI_ST_FAILURE;
-	}
-	if (partitions_count != 0) {
-		efi_st_error("Incorrect partitions count received: %u\n",
-			     partitions_count);
-		return EFI_ST_FAILURE;
-	}
 	return EFI_SUCCESS;
 }
 

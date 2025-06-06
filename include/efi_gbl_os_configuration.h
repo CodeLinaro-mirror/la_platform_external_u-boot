@@ -19,23 +19,35 @@
 
 #define EFI_GBL_OS_CONFIGURATION_PROTOCOL_REVISION 0x00010000
 
+enum GBL_EFI_DEVICE_TREE_TYPE {
+	// HLOS device tree.
+	DEVICE_TREE,
+	// HLOS device tree overlay.
+	OVERLAY,
+	// pVM device assignment overlay.
+	PVM_DA_OVERLAY,
+};
+
 enum GBL_EFI_DEVICE_TREE_SOURCE {
-	BOOT = 0,
+	// Device tree loaded from boot partition.
+	BOOT,
+	// Device tree loaded from vendor_boot partition.
 	VENDOR_BOOT,
+	// Device tree loaded from dtbo partition.
 	DTBO,
+	// Device tree loaded from dtb partition.
 	DTB,
 };
 
 struct efi_gbl_device_tree_metadata {
 	// GblDeviceTreeSource
 	u32 source;
+	// GblDeviceTreeType
+	u32 type;
 	// Values are zeroed and must not be used in case of BOOT / VENDOR_BOOT source
 	u32 id;
 	u32 rev;
 	u32 custom[4];
-	// Make sure GblDeviceTreeMetadata size is 8-bytes aligned. Also reserved for
-	// the future cases
-	u32 reserved;
 };
 
 struct efi_gbl_verified_device_tree {
@@ -51,14 +63,6 @@ struct efi_gbl_verified_device_tree {
 
 struct efi_gbl_os_configuration_protocol {
 	u64 revision;
-
-	// Generates fixups for the kernel command line built by GBL.
-	efi_status_t(EFIAPI *fixup_kernel_commandline)(
-		struct efi_gbl_os_configuration_protocol *self,
-		const char *command_line, /* in */
-		char *fixup, /* out */
-		size_t *fixup_buffer_size /* in-out */
-	);
 
 	// Generates fixups for the bootconfig built by GBL.
 	efi_status_t(EFIAPI *fixup_bootconfig)(

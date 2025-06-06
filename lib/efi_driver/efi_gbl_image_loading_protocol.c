@@ -53,7 +53,8 @@ static efi_status_t EFIAPI get_buffer(struct efi_image_loading_protocol *this,
 			   pbuf->name_len_bytes) == 0) {
 			if (pbuf->buffer == 0) {
 				u64 address;
-				size_t alloc_size = gbl_info->size_bytes + pbuf->alignment;
+				size_t alloc_size =
+					gbl_info->size_bytes + pbuf->alignment;
 
 				efi_status_t ret = efi_allocate_pages(
 					EFI_ALLOCATE_ANY_PAGES,
@@ -67,7 +68,8 @@ static efi_status_t EFIAPI get_buffer(struct efi_image_loading_protocol *this,
 					return ret;
 				}
 
-				size_t offset = pbuf->alignment - address % pbuf->alignment;
+				size_t offset = pbuf->alignment -
+						address % pbuf->alignment;
 				pbuf->buffer = address + offset;
 				pbuf->buffer_size = alloc_size - offset;
 			}
@@ -85,22 +87,9 @@ static efi_status_t EFIAPI get_buffer(struct efi_image_loading_protocol *this,
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
-static efi_status_t EFIAPI
-get_verify_partitions(struct efi_image_loading_protocol *this,
-		      size_t *partitions_count, gbl_partition_name *partitions)
-{
-	EFI_ENTRY("%p %p %p", this, partitions_count, partitions);
-
-	// No additions partitions to verify
-	*partitions_count = 0;
-
-	return EFI_EXIT(EFI_SUCCESS);
-}
-
 static efi_image_loading_protocol efi_gbl_image_loading_proto = {
 	.revision = EFI_GBL_IMAGE_LOADING_PROTOCOL_REVISION,
 	.get_buffer = get_buffer,
-	.get_verify_partitions = get_verify_partitions,
 };
 
 efi_status_t efi_gbl_image_loading_register(void)

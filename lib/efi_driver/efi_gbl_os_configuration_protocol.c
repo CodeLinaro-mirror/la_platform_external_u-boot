@@ -14,22 +14,6 @@
 const efi_guid_t efi_gbl_os_config_guid =
 	EFI_GBL_OS_CONFIGURATION_PROTOCOL_GUID;
 
-static efi_status_t EFIAPI fixup_kernel_commandline(
-	struct efi_gbl_os_configuration_protocol *self,
-	const char *command_line, char *fixup, size_t *fixup_buffer_size)
-{
-	EFI_ENTRY("%p, %p, %p, %p", self, command_line, fixup,
-		  fixup_buffer_size);
-
-	if (!self || !command_line || !fixup || !fixup_buffer_size)
-		return EFI_EXIT(EFI_INVALID_PARAMETER);
-
-	// No fixup needed, set fixup_buffer_size to 0
-	*fixup_buffer_size = 0;
-
-	return EFI_EXIT(EFI_SUCCESS);
-}
-
 static efi_status_t
 bootconfig_load_from_persistent_disk_device(char *fixup,
 					    size_t *fixup_buffer_size)
@@ -110,7 +94,6 @@ select_device_trees(struct efi_gbl_os_configuration_protocol *self,
 
 static struct efi_gbl_os_configuration_protocol efi_gbl_os_config_proto = {
 	.revision = EFI_GBL_OS_CONFIGURATION_PROTOCOL_REVISION,
-	.fixup_kernel_commandline = fixup_kernel_commandline,
 	.fixup_bootconfig = fixup_bootconfig,
 	.select_device_trees = select_device_trees,
 };
