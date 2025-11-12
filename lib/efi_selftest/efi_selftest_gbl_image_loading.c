@@ -6,7 +6,6 @@
 #include <blk.h>
 #include <efi_api.h>
 #include <efi.h>
-#include <efi_gbl_image_loading.h>
 #include <efi_selftest.h>
 #include <part.h>
 #include <stdlib.h>

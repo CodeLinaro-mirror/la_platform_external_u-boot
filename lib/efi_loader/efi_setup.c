@@ -11,7 +11,6 @@
 #include <efi_driver.h>
 #include <efi_gbl_ab.h>
 #include <efi_gbl_fastboot.h>
-#include <efi_gbl_image_loading.h>
 #include <efi_gbl_os_configuration.h>
 #include <efi_loader.h>
 #include <efi_variable.h>
@@ -385,12 +384,6 @@ efi_status_t efi_init_obj_list(void)
 	    !IS_ENABLED(CONFIG_EFI_CAPSULE_ON_DISK_EARLY))
 		ret = efi_launch_capsules();
 
-	/* Register GBL Image Loading protocol */
-	if (IS_ENABLED(CONFIG_EFI_GBL_IMAGE_LOADING)) {
-		ret = efi_gbl_image_loading_register();
-		if (ret != EFI_SUCCESS)
-			goto out;
-	}
 out:
 	efi_obj_list_initialized = ret;
 	return ret;
