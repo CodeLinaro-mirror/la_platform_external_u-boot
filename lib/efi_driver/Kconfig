@@ -16,6 +16,29 @@ config EFI_GBL_FASTBOOT_PROTOCOL
 	  This protocol is used for defining custom fastboot variables,
 	  custom oem commands, and driving a device-local bootloader session.
 
+config EFI_GBL_FASTBOOT_TRANSPORT_PROTOCOL
+	bool "Include GBL Fastboot Transport protocol implementation"
+	depends on EFI_LOADER
+	default y if EFI_GBL_FASTBOOT_TRANSPORT_PROTOCOL_SERIAL || EFI_GBL_FASTBOOT_TRANSPORT_PROTOCOL_DUMMY
+	help
+	  Include the driver for the GBL Fastboot Transport protocol.
+          This protocol is used for defining fastboot transport.
+
+config EFI_GBL_FASTBOOT_TRANSPORT_PROTOCOL_SERIAL
+	bool "Include GBL Fastboot Transport protocol serial implementation"
+	depends on EFI_LOADER
+	help
+	  Include the serial interactive driver for the GBL Fastboot Transport
+          protocol. This protocol is used for defining fastboot transport.
+
+config EFI_GBL_FASTBOOT_TRANSPORT_PROTOCOL_DUMMY
+	bool "Include GBL Fastboot Transport protocol dummy implementation"
+	depends on EFI_LOADER
+	help
+	  Include the dummy driver for the GBL Fastboot Transport protocol.
+	  This protocol is used to verify multiple transport protocol
+          registration and usage.
+
 config EFI_GBL_OS_CONFIGURATION_PROTOCOL
 	bool "Include GBL Os Configuration protocol"
 	depends on EFI_LOADER

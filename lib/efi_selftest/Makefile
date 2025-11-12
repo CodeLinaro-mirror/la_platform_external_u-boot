@@ -77,6 +77,8 @@ endif
 
 obj-$(CONFIG_EFI_ESRT) += efi_selftest_esrt.o
 
+obj-$(CONFIG_EFI_GBL_FASTBOOT_TRANSPORT_PROTOCOL) += efi_selftest_gbl_fastboot_transport_protocol.o
+
 targets += \
 efi_miniapp_file_image_exception.h \
 efi_miniapp_file_image_exit.h \

@@ -11,6 +11,7 @@
 #include <efi_driver.h>
 #include <efi_gbl_ab.h>
 #include <efi_gbl_fastboot.h>
+#include <efi_gbl_fastboot_transport.h>
 #include <efi_gbl_os_configuration.h>
 #include <efi_loader.h>
 #include <efi_variable.h>
@@ -48,13 +49,12 @@ static efi_status_t efi_init_platform_lang(void)
 	 * Variable PlatformLangCodes defines the language codes that the
 	 * machine can support.
 	 */
-	ret = efi_set_variable_int(u"PlatformLangCodes",
-				   &efi_global_variable_guid,
-				   EFI_VARIABLE_BOOTSERVICE_ACCESS |
-				   EFI_VARIABLE_RUNTIME_ACCESS |
-				   EFI_VARIABLE_READ_ONLY,
-				   sizeof(CONFIG_EFI_PLATFORM_LANG_CODES),
-				   CONFIG_EFI_PLATFORM_LANG_CODES, false);
+	ret = efi_set_variable_int(
+		u"PlatformLangCodes", &efi_global_variable_guid,
+		EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS |
+			EFI_VARIABLE_READ_ONLY,
+		sizeof(CONFIG_EFI_PLATFORM_LANG_CODES),
+		CONFIG_EFI_PLATFORM_LANG_CODES, false);
 	if (ret != EFI_SUCCESS)
 		goto out;
 
@@ -62,8 +62,7 @@ static efi_status_t efi_init_platform_lang(void)
 	 * Variable PlatformLang defines the language that the machine has been
 	 * configured for.
 	 */
-	ret = efi_get_variable_int(u"PlatformLang",
-				   &efi_global_variable_guid,
+	ret = efi_get_variable_int(u"PlatformLang", &efi_global_variable_guid,
 				   NULL, &data_size, &pos, NULL);
 	if (ret == EFI_BUFFER_TOO_SMALL) {
 		/* The variable is already set. Do not change it. */
@@ -79,11 +78,10 @@ static efi_status_t efi_init_platform_lang(void)
 	if (pos)
 		*pos = 0;
 
-	ret = efi_set_variable_int(u"PlatformLang",
-				   &efi_global_variable_guid,
+	ret = efi_set_variable_int(u"PlatformLang", &efi_global_variable_guid,
 				   EFI_VARIABLE_NON_VOLATILE |
-				   EFI_VARIABLE_BOOTSERVICE_ACCESS |
-				   EFI_VARIABLE_RUNTIME_ACCESS,
+					   EFI_VARIABLE_BOOTSERVICE_ACCESS |
+					   EFI_VARIABLE_RUNTIME_ACCESS,
 				   1 + strlen(lang), lang, false);
 out:
 	if (ret != EFI_SUCCESS)
@@ -105,13 +103,11 @@ static efi_status_t efi_init_secure_boot(void)
 	};
 	efi_status_t ret;
 
-	ret = efi_set_variable_int(u"SignatureSupport",
-				   &efi_global_variable_guid,
-				   EFI_VARIABLE_READ_ONLY |
-				   EFI_VARIABLE_BOOTSERVICE_ACCESS |
-				   EFI_VARIABLE_RUNTIME_ACCESS,
-				   sizeof(signature_types),
-				   &signature_types, false);
+	ret = efi_set_variable_int(
+		u"SignatureSupport", &efi_global_variable_guid,
+		EFI_VARIABLE_READ_ONLY | EFI_VARIABLE_BOOTSERVICE_ACCESS |
+			EFI_VARIABLE_RUNTIME_ACCESS,
+		sizeof(signature_types), &signature_types, false);
 	if (ret != EFI_SUCCESS)
 		printf("EFI: cannot initialize SignatureSupport variable\n");
 
@@ -139,12 +135,12 @@ static efi_status_t efi_init_capsule(void)
 		efi_create_indexed_name(var_name16, sizeof(var_name16),
 					"Capsule", CONFIG_EFI_CAPSULE_MAX);
 
-		ret = efi_set_variable_int(u"CapsuleMax",
-					   &efi_guid_capsule_report,
-					   EFI_VARIABLE_READ_ONLY |
-					   EFI_VARIABLE_BOOTSERVICE_ACCESS |
-					   EFI_VARIABLE_RUNTIME_ACCESS,
-					   22, var_name16, false);
+		ret = efi_set_variable_int(
+			u"CapsuleMax", &efi_guid_capsule_report,
+			EFI_VARIABLE_READ_ONLY |
+				EFI_VARIABLE_BOOTSERVICE_ACCESS |
+				EFI_VARIABLE_RUNTIME_ACCESS,
+			22, var_name16, false);
 		if (ret != EFI_SUCCESS)
 			printf("EFI: cannot initialize CapsuleMax variable\n");
 	}
@@ -175,13 +171,12 @@ static efi_status_t efi_init_os_indications(void)
 		os_indications_supported |=
 			EFI_OS_INDICATIONS_FMP_CAPSULE_SUPPORTED;
 
-	return efi_set_variable_int(u"OsIndicationsSupported",
-				    &efi_global_variable_guid,
-				    EFI_VARIABLE_BOOTSERVICE_ACCESS |
-				    EFI_VARIABLE_RUNTIME_ACCESS |
-				    EFI_VARIABLE_READ_ONLY,
-				    sizeof(os_indications_supported),
-				    &os_indications_supported, false);
+	return efi_set_variable_int(
+		u"OsIndicationsSupported", &efi_global_variable_guid,
+		EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS |
+			EFI_VARIABLE_READ_ONLY,
+		sizeof(os_indications_supported), &os_indications_supported,
+		false);
 }
 
 /**
@@ -362,6 +357,14 @@ efi_status_t efi_init_obj_list(void)
 		ret = efi_gbl_fastboot_register();
 		if (ret != EFI_SUCCESS) {
 			log_err("GBL Fastboot Protocol initialization error\n");
+			goto out;
+		}
+	}
+
+	if (IS_ENABLED(CONFIG_EFI_GBL_FASTBOOT_TRANSPORT_PROTOCOL)) {
+		ret = efi_gbl_fastboot_transport_register();
+		if (ret != EFI_SUCCESS) {
+			log_err("GBL Fastboot Transport Protocol initialization error\n");
 			goto out;
 		}
 	}
