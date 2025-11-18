@@ -26,14 +26,14 @@ config EFI_GBL_FASTBOOT_TRANSPORT_PROTOCOL
 
 config EFI_GBL_FASTBOOT_TRANSPORT_PROTOCOL_SERIAL
 	bool "Include GBL Fastboot Transport protocol serial implementation"
-	depends on EFI_LOADER
+	depends on EFI_LOADER && CYCLIC
 	help
 	  Include the serial interactive driver for the GBL Fastboot Transport
           protocol. This protocol is used for defining fastboot transport.
 
 config EFI_GBL_FASTBOOT_TRANSPORT_PROTOCOL_DUMMY
 	bool "Include GBL Fastboot Transport protocol dummy implementation"
-	depends on EFI_LOADER
+	depends on EFI_LOADER && CYCLIC
 	help
 	  Include the dummy driver for the GBL Fastboot Transport protocol.
 	  This protocol is used to verify multiple transport protocol
