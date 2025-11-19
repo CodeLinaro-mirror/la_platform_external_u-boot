@@ -89,123 +89,65 @@ static efi_status_t EFIAPI get_var_all(struct gbl_efi_fastboot_protocol *this,
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
-static efi_status_t EFIAPI
-run_oem_function(struct gbl_efi_fastboot_protocol *this, const char *command,
-		 size_t command_len, char *buf, size_t *bufsize)
+static efi_status_t EFIAPI get_staged(struct gbl_efi_fastboot_protocol *this,
+				      uint8_t *out, size_t *out_size,
+				      size_t *out_remain)
 {
-	EFI_ENTRY("%p, %p, %lu, %p, %p", this, command, command_len, buf,
-		  bufsize);
-
-	return EFI_EXIT(EFI_UNSUPPORTED);
-}
-
-static efi_status_t EFIAPI get_policy(struct gbl_efi_fastboot_protocol *this,
-				      struct gbl_efi_fastboot_policy *policy)
-{
-	EFI_ENTRY("%p, %p", this, policy);
+	EFI_ENTRY("%p, %p, %p, %p", this, out, out_size, out_remain);
 
 	return EFI_EXIT(EFI_UNSUPPORTED);
 }
 
 static efi_status_t EFIAPI set_lock(struct gbl_efi_fastboot_protocol *this,
-				    u64 lock_state)
+				    bool critical, bool lock)
 {
-	EFI_ENTRY("%p, %lu", this, lock_state);
+	EFI_ENTRY("%p, %i, %i", this, critical, lock);
 
 	return EFI_EXIT(EFI_UNSUPPORTED);
 }
 
-static efi_status_t EFIAPI clear_lock(struct gbl_efi_fastboot_protocol *this,
-				      u64 lock_state)
+static efi_status_t EFIAPI get_lock(struct gbl_efi_fastboot_protocol *this,
+				    bool critical, bool *out_lock)
 {
-	EFI_ENTRY("%p, %lu", this, lock_state);
+	EFI_ENTRY("%p, %i, %p", this, critical, out_lock);
 
 	return EFI_EXIT(EFI_UNSUPPORTED);
 }
 
-// Structure to store local session context.
-struct fastboot_context {};
-static struct fastboot_context context;
-
-static efi_status_t EFIAPI
-start_local_session(struct gbl_efi_fastboot_protocol *this, void **ctx)
+static efi_status_t EFIAPI vendor_erase(struct gbl_efi_fastboot_protocol *this,
+					const uint8_t *part_name,
+					size_t part_name_len,
+					gbl_efi_fastboot_erase_action *action)
 {
-	EFI_ENTRY("%p, %p", this, ctx);
-	if (this != &gbl_efi_fastboot_proto || ctx == NULL) {
-		return EFI_EXIT(EFI_INVALID_PARAMETER);
-	}
+	EFI_ENTRY("%p, %p, %zu, %p", this, part_name, part_name_len, action);
 
-	*ctx = &context;
-
-	return EFI_EXIT(EFI_SUCCESS);
+	return EFI_EXIT(EFI_UNSUPPORTED);
 }
 
 static efi_status_t EFIAPI
-update_local_session(struct gbl_efi_fastboot_protocol *this, void *ctx,
-		     char *buf, size_t *bufsize)
+command_exec(struct gbl_efi_fastboot_protocol *this, size_t num_args,
+	     const char *const *args, size_t download_data_used_len,
+	     uint8_t *download_data, size_t download_data_full_size,
+	     gbl_efi_fastboot_command_exec_result *implementation,
+	     fastboot_message_sender sender, void *ctx)
 {
-	EFI_ENTRY_NO_LOG("%p, %p, %p, %p", this, ctx, buf, bufsize);
-	struct fastboot_context *fb_ctx = (struct fastboot_context *)ctx;
-	if (this != &gbl_efi_fastboot_proto || fb_ctx != &context ||
-	    buf == NULL || bufsize == NULL) {
-		return EFI_EXIT(EFI_INVALID_PARAMETER);
-	}
-
-	*bufsize = 0;
-	return EFI_EXIT_NO_LOG(EFI_SUCCESS);
-}
-
-static efi_status_t EFIAPI
-close_local_session(struct gbl_efi_fastboot_protocol *this, void *ctx)
-{
-	EFI_ENTRY("%p, %p", this, ctx);
-	struct fastboot_context *fb_ctx = (struct fastboot_context *)ctx;
-	if (this != &gbl_efi_fastboot_proto || fb_ctx != &context) {
-		return EFI_EXIT(EFI_INVALID_PARAMETER);
-	}
-
-	return EFI_EXIT(EFI_SUCCESS);
-}
-
-static efi_status_t EFIAPI get_partition_permissions(
-	struct gbl_efi_fastboot_protocol *this, const char *part_name,
-	size_t part_name_len, u64 *permissions)
-{
-	EFI_ENTRY("%p, %p, %lu, %p", this, part_name, part_name_len,
-		  permissions);
+	EFI_ENTRY("%p, %zu, %p, %zu, %p, %zu, %p, %p, %p", this, num_args, args,
+		  download_data_used_len, download_data,
+		  download_data_full_size, implementation, sender, ctx);
 
 	return EFI_EXIT(EFI_UNSUPPORTED);
-}
-
-static efi_status_t EFIAPI wipe_user_data(struct gbl_efi_fastboot_protocol *this)
-{
-	EFI_ENTRY("%p", this);
-
-	return EFI_EXIT(EFI_UNSUPPORTED);
-}
-
-static bool EFIAPI should_enter_fastboot(struct gbl_efi_fastboot_protocol *this)
-{
-	EFI_ENTRY("%p", this);
-
-	return EFI_EXIT(false);
 }
 
 static struct gbl_efi_fastboot_protocol gbl_efi_fastboot_proto = {
-	.version = 1,
+	.revision = 4,
 	.serial_number = "cuttlefish-0xCAFED00D",
 	.get_var = get_var,
 	.get_var_all = get_var_all,
-	.run_oem_function = run_oem_function,
-	.get_policy = get_policy,
+	.get_staged = get_staged,
 	.set_lock = set_lock,
-	.clear_lock = clear_lock,
-	.start_local_session = start_local_session,
-	.update_local_session = update_local_session,
-	.close_local_session = close_local_session,
-	.get_partition_permissions = get_partition_permissions,
-	.wipe_user_data = wipe_user_data,
-	.should_enter_fastboot = should_enter_fastboot,
+	.get_lock = get_lock,
+	.vendor_erase = vendor_erase,
+	.command_exec = command_exec,
 };
 
 efi_status_t efi_gbl_fastboot_register(void)
