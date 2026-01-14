@@ -60,13 +60,13 @@ bootconfig_load_from_persistent_disk_device(char *fixup,
 }
 
 static efi_status_t EFIAPI fixup_bootconfig(
-	struct efi_gbl_os_configuration_protocol *self, const char *bootconfig,
-	size_t size, char *fixup, size_t *fixup_buffer_size)
+	struct efi_gbl_os_configuration_protocol *self, size_t bootconfig_size,
+	const char *bootconfig, size_t *fixup_buffer_size, char *fixup)
 {
-	EFI_ENTRY("%p, %p, %zu, %p, %p", self, bootconfig, size, fixup,
-		  fixup_buffer_size);
+	EFI_ENTRY("%p, %zu, %p, %p, %p", self, bootconfig_size, bootconfig,
+		  fixup_buffer_size, fixup);
 
-	if (!self || !bootconfig || !fixup || !fixup_buffer_size)
+	if (!self || !bootconfig || !fixup_buffer_size || !fixup)
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 
 	if (IS_ENABLED(CONFIG_ANDROID_PERSISTENT_RAW_DISK_DEVICE))
@@ -79,12 +79,11 @@ static efi_status_t EFIAPI fixup_bootconfig(
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
-static efi_status_t EFIAPI
-select_device_trees(struct efi_gbl_os_configuration_protocol *self,
-		    struct efi_gbl_verified_device_tree *device_trees,
-		    size_t num_device_trees)
+static efi_status_t EFIAPI select_device_trees(
+	struct efi_gbl_os_configuration_protocol *self, size_t num_device_trees,
+	struct efi_gbl_verified_device_tree *device_trees)
 {
-	EFI_ENTRY("%p, %p, %zu", self, device_trees, num_device_trees);
+	EFI_ENTRY("%p, %zu, %p", self, num_device_trees, device_trees);
 
 	if (!self)
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
@@ -92,10 +91,21 @@ select_device_trees(struct efi_gbl_os_configuration_protocol *self,
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
+static efi_status_t EFIAPI select_fit_configuration(
+	struct efi_gbl_os_configuration_protocol *self, size_t fit_size,
+	const u8 *fit, size_t metadata_size, const u8 *metadata,
+	size_t *selected_configuration_offset)
+{
+	EFI_ENTRY("%p, %zu, %p, %zu, %p, %p", self, fit_size, fit,
+		  metadata_size, metadata, selected_configuration_offset);
+	return EFI_EXIT(EFI_UNSUPPORTED);
+}
+
 static struct efi_gbl_os_configuration_protocol efi_gbl_os_config_proto = {
 	.revision = EFI_GBL_OS_CONFIGURATION_PROTOCOL_REVISION,
 	.fixup_bootconfig = fixup_bootconfig,
 	.select_device_trees = select_device_trees,
+	.select_fit_configuration = select_fit_configuration,
 };
 
 efi_status_t efi_gbl_os_config_register(void)
