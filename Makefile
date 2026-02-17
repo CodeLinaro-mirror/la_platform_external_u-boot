@@ -2109,11 +2109,11 @@ tags ctags:
 		ln -s ctags tags
 
 ifeq ($(CONFIG_BINMAN),y)
-compile_commands.json: System.map u-boot.bin u-boot.dtb u-boot-x86-start16.bin u-boot-x86-reset16.bin
+compile_commands.json: $(INPUTS-y)
 	$(call if_changed,binman)
 	$(srctree)/scripts/gen_compile_commands.py
 else
-compile_commands.json: System.map u-boot.bin
+compile_commands.json: $(INPUTS-y)
 	$(srctree)/scripts/gen_compile_commands.py
 endif
 
