@@ -70,9 +70,6 @@ CONFIG_LOG=y
 CONFIG_LOG_CONSOLE=y
 CONFIG_LOG_ERROR_RETURN=y
 
-# Must not use RNG from host.
-CONFIG_VIRTIO_RNG=n
-
 # Enable GBL Custom protocols
 CONFIG_EFI_LOADER=y
 # TODO(b/373043367): Enable once AB is finalized.
