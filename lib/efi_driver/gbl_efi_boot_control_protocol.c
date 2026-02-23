@@ -5,7 +5,7 @@
 
 #include <blk.h>
 #include <efi.h>
-#include <efi_gbl_ab.h>
+#include <gbl_efi_boot_control_protocol.h>
 #include <efi_loader.h>
 #include <part.h>
 #include <stdlib.h>

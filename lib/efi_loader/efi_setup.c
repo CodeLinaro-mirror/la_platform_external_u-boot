@@ -9,7 +9,7 @@
 #define LOG_CATEGORY LOGC_EFI
 
 #include <efi_driver.h>
-#include <efi_gbl_ab.h>
+#include <gbl_efi_boot_control_protocol.h>
 #include <efi_gbl_fastboot.h>
 #include <efi_gbl_fastboot_transport.h>
 #include <efi_gbl_os_configuration.h>
@@ -345,7 +345,7 @@ efi_status_t efi_init_obj_list(void)
 	if (ret != EFI_SUCCESS)
 		goto out;
 
-	if (IS_ENABLED(CONFIG_EFI_GBL_AB_PROTOCOL)) {
+	if (IS_ENABLED(CONFIG_GBL_EFI_BOOT_CONTROL_PROTOCOL)) {
 		ret = efi_gbl_ab_register();
 		if (ret != EFI_SUCCESS) {
 			log_err("AB_PROTOCOL initialization error\n");
