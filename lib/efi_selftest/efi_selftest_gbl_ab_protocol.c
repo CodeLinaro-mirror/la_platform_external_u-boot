@@ -8,7 +8,7 @@
 #include <efi_api.h>
 #include <efi.h>
 #include <android_bootloader_message.h>
-#include <efi_gbl_ab.h>
+#include <gbl_efi_boot_control_protocol.h>
 #include <efi_selftest.h>
 #include <part.h>
 #include <stdlib.h>

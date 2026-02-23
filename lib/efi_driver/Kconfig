@@ -1,9 +1,9 @@
-config EFI_GBL_AB_PROTOCOL
-	bool "Include GBL AB boot protocol"
+config GBL_EFI_BOOT_CONTROL_PROTOCOL
+	bool "Include GBL Boot Control protocol"
 	depends on EFI_LOADER
 	select CRC32
 	help
-	  Include the driver for the custom GBL AB boot slot protocol.
+	  Include the driver for the custom GBL Boot Control protocol.
 	  This protocol is used for determining the current boot slot,
 	  marking boot attempts, changing the currently active slot,
 	  and querying metadata about boot slots.
