@@ -22,8 +22,6 @@
 
 static const char *device_name = "virtio";
 static const char *ab_partition_name = "misc";
-static const char *recovery_str = "recovery";
-static const char *bootloader_str = "bootloader";
 static struct disk_partition ab_partition;
 static struct blk_desc *block_device;
 
@@ -74,26 +72,6 @@ static efi_status_t ensure_buffer_initialized(void)
 	return EFI_SUCCESS;
 }
 
-static void reinitialize_private(void)
-{
-	/* Assume normal boot, so don't fill the command */
-	memset(command, 0, COMMAND_LEN);
-	memset(&android_metadata, 0, sizeof(android_metadata));
-	android_metadata.magic = BOOT_CTRL_MAGIC;
-	android_metadata.version = BOOT_CTRL_VERSION;
-	android_metadata.nb_slot = 2;
-	for (int i = 0; i < android_metadata.nb_slot; i++) {
-		android_metadata.slot_suffix[i] = 'a' + i;
-		android_metadata.slot_info[i].priority = 15;
-		android_metadata.slot_info[i].tries_remaining = 7;
-	}
-
-	android_metadata.crc32_le =
-		calculate_metadata_checksum(&android_metadata);
-	dirty = true;
-	data_loaded = true;
-}
-
 struct disk_offset {
 	u64 blocks;
 	u64 remaining_bytes;
@@ -108,7 +86,7 @@ struct disk_offset byte_offset_to_blocks(size_t byte_offset, ulong blksize)
 	return ret;
 }
 
-static efi_status_t load_boot_data_private(void)
+static efi_status_t load_boot_data(void)
 {
 	if (data_loaded) {
 		return EFI_SUCCESS;
@@ -120,16 +98,21 @@ static efi_status_t load_boot_data_private(void)
 		log_err("Failed to read bootloader command: %l\n", res);
 		return EFI_DEVICE_ERROR;
 	}
-	memcpy(buffer, command, COMMAND_LEN);
+	memcpy(command, buffer, COMMAND_LEN);
 
 	struct disk_offset offset =
 		byte_offset_to_blocks(2048, ab_partition.blksz);
 	res = blk_dread(block_device, ab_partition.start + offset.blocks, 1,
 			buffer);
 
+	if (res != 1) {
+		log_err("Failed to read AB metadata: %l\n", res);
+		return EFI_DEVICE_ERROR;
+	}
+
 	dirty = false;
 	data_loaded = true;
-	memcpy(buffer + offset.remaining_bytes, &android_metadata,
+	memcpy(&android_metadata, buffer + offset.remaining_bytes,
 	       sizeof(android_metadata));
 	if (calculate_metadata_checksum(&android_metadata) !=
 	    android_metadata.crc32_le) {
@@ -138,31 +121,6 @@ static efi_status_t load_boot_data_private(void)
 	}
 
 	return EFI_SUCCESS;
-}
-
-static efi_status_t EFIAPI
-load_boot_data(struct gbl_efi_boot_control_protocol *this,
-	       struct efi_gbl_slot_metadata_block *metadata)
-{
-	EFI_ENTRY("%p, %p", this, metadata);
-	if (this != &efi_gbl_slot_proto || !metadata) {
-		return EFI_EXIT(EFI_INVALID_PARAMETER);
-	}
-
-	efi_status_t res = ensure_buffer_initialized();
-	if (res != EFI_SUCCESS)
-		return EFI_EXIT(res);
-
-	res = load_boot_data_private();
-	if (res != EFI_SUCCESS) {
-		memset(metadata, 0, sizeof(*metadata));
-		return EFI_EXIT(res);
-	}
-
-	metadata->slot_count = android_metadata.nb_slot;
-	metadata->max_retries = 7;
-	metadata->unbootable_metadata = 0;
-	return EFI_EXIT(EFI_SUCCESS);
 }
 
 static efi_status_t EFIAPI
@@ -178,7 +136,7 @@ get_slot_info(struct gbl_efi_boot_control_protocol *this, u8 idx,
 	if (res != EFI_SUCCESS)
 		return EFI_EXIT(res);
 
-	res = load_boot_data_private();
+	res = load_boot_data();
 	if (res != EFI_SUCCESS) {
 		memset(info, 0, sizeof(*info));
 		return EFI_EXIT(res);
@@ -191,11 +149,10 @@ get_slot_info(struct gbl_efi_boot_control_protocol *this, u8 idx,
 	struct slot_metadata const *slot = &android_metadata.slot_info[idx];
 
 	info->suffix = android_metadata.slot_suffix[idx];
-	info->merge_status = 0;
-	info->priority = slot->priority;
-	info->successful = slot->successful_boot;
-	info->tries = slot->tries_remaining;
 	info->unbootable_reason = 0;
+	info->priority = slot->priority;
+	info->remaining_tries = slot->tries_remaining;
+	info->successful = slot->successful_boot;
 
 	return EFI_EXIT(EFI_SUCCESS);
 }
@@ -211,7 +168,7 @@ get_current_slot_idx(struct gbl_efi_boot_control_protocol *this, u8 *idx)
 	if (res != EFI_SUCCESS)
 		return EFI_EXIT(res);
 
-	res = load_boot_data_private();
+	res = load_boot_data();
 	if (res != EFI_SUCCESS)
 		return res;
 
@@ -256,11 +213,10 @@ get_current_slot(struct gbl_efi_boot_control_protocol *this,
 	struct slot_metadata const *slot = &android_metadata.slot_info[idx];
 
 	info->suffix = android_metadata.slot_suffix[idx];
-	info->merge_status = 0;
-	info->priority = slot->priority;
-	info->successful = slot->successful_boot;
-	info->tries = slot->tries_remaining;
 	info->unbootable_reason = 0;
+	info->priority = slot->priority;
+	info->remaining_tries = slot->tries_remaining;
+	info->successful = slot->successful_boot;
 
 	return EFI_EXIT(EFI_SUCCESS);
 }
@@ -277,7 +233,7 @@ set_active_slot(struct gbl_efi_boot_control_protocol *this, u8 idx)
 	if (res != EFI_SUCCESS)
 		return EFI_EXIT(res);
 
-	res = load_boot_data_private();
+	res = load_boot_data();
 	if (res != EFI_SUCCESS)
 		return EFI_EXIT(res);
 
@@ -298,143 +254,6 @@ set_active_slot(struct gbl_efi_boot_control_protocol *this, u8 idx)
 	}
 
 	dirty = true;
-	return EFI_EXIT(EFI_SUCCESS);
-}
-
-static efi_status_t EFIAPI set_slot_unbootable(
-	struct gbl_efi_boot_control_protocol *this, u8 idx, u32 reason)
-{
-	EFI_ENTRY("%p, %idx, %u", this, idx, reason);
-	if (this != &efi_gbl_slot_proto || reason > VERIFICATION_FAILURE) {
-		return EFI_EXIT(EFI_INVALID_PARAMETER);
-	}
-
-	efi_status_t res = ensure_buffer_initialized();
-	if (res != EFI_SUCCESS)
-		return EFI_EXIT(res);
-
-	res = load_boot_data_private();
-	if (res != EFI_SUCCESS)
-		return EFI_EXIT(res);
-
-	if (idx >= android_metadata.nb_slot) {
-		return EFI_EXIT(EFI_INVALID_PARAMETER);
-	}
-
-	dirty = true;
-
-	struct slot_metadata *slot = &android_metadata.slot_info[idx];
-
-	slot->priority = 0;
-	slot->tries_remaining = 0;
-	slot->successful_boot = 0;
-
-	return EFI_EXIT(EFI_SUCCESS);
-}
-
-static efi_status_t EFIAPI
-mark_boot_attempt(struct gbl_efi_boot_control_protocol *this)
-{
-	EFI_ENTRY("%p", this);
-
-	u8 idx;
-	efi_status_t res = ensure_buffer_initialized();
-	if (res != EFI_SUCCESS)
-		return EFI_EXIT(res);
-
-	res = get_current_slot_idx(this, &idx);
-	if (res != EFI_SUCCESS)
-		return EFI_EXIT(res);
-
-	struct slot_metadata *slot = &android_metadata.slot_info[idx];
-
-	if (!slot->successful_boot && strcmp(command, recovery_str) != 0) {
-		if (slot->tries_remaining) {
-			dirty = true;
-			slot->tries_remaining--;
-		} else {
-			return EFI_EXIT(EFI_UNSUPPORTED);
-		}
-	}
-
-	return EFI_EXIT(EFI_SUCCESS);
-}
-
-static efi_status_t EFIAPI
-get_boot_reason(struct gbl_efi_boot_control_protocol *this, u32 *reason,
-		size_t *size, u8 *subreason)
-{
-	EFI_ENTRY("%p, %p, %p, %p", this, reason, size, subreason);
-	if (this != &efi_gbl_slot_proto || !reason || !size || !subreason) {
-		return EFI_EXIT(EFI_INVALID_PARAMETER);
-	}
-
-	efi_status_t res = ensure_buffer_initialized();
-	if (res != EFI_SUCCESS)
-		return EFI_EXIT(res);
-
-	res = load_boot_data_private();
-	if (res != EFI_SUCCESS)
-		return EFI_EXIT(res);
-
-	if (strcmp(command, bootloader_str) == 0) {
-		*reason = BOOTLOADER;
-	} else if (strcmp(command, recovery_str) == 0) {
-		*reason = RECOVERY;
-	} else {
-		*reason = EMPTY_EFI_BOOT_REASON;
-	}
-
-	return EFI_EXIT(EFI_SUCCESS);
-}
-
-static efi_status_t EFIAPI
-set_boot_reason(struct gbl_efi_boot_control_protocol *this, u32 reason,
-		size_t size, const u8 *subreason)
-{
-	EFI_ENTRY();
-	if (this != &efi_gbl_slot_proto || reason > REBOOT || !subreason) {
-		return EFI_EXIT(EFI_INVALID_PARAMETER);
-	}
-
-	efi_status_t res = ensure_buffer_initialized();
-	if (res != EFI_SUCCESS)
-		return EFI_EXIT(res);
-
-	res = load_boot_data_private();
-	if (res != EFI_SUCCESS)
-		return EFI_EXIT(res);
-
-	switch (reason) {
-	case RECOVERY:
-		strcpy(command, recovery_str);
-		break;
-	case BOOTLOADER:
-		strcpy(command, bootloader_str);
-		break;
-	default:
-		memset(command, 0, COMMAND_LEN);
-		break;
-	}
-	dirty = true;
-
-	return EFI_EXIT(EFI_SUCCESS);
-}
-
-static efi_status_t EFIAPI
-reinitialize(struct gbl_efi_boot_control_protocol *this)
-{
-	EFI_ENTRY("%p", this);
-	if (this != &efi_gbl_slot_proto) {
-		return EFI_EXIT(EFI_INVALID_PARAMETER);
-	}
-
-	efi_status_t res = ensure_buffer_initialized();
-	if (res != EFI_SUCCESS)
-		return EFI_EXIT(res);
-
-	reinitialize_private();
-
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
@@ -475,16 +294,9 @@ flush_changes(struct gbl_efi_boot_control_protocol *this)
 
 static struct gbl_efi_boot_control_protocol efi_gbl_slot_proto = {
 	.revision = GBL_EFI_BOOT_CONTROL_REVISION,
-	.load_boot_data = load_boot_data,
 	.get_slot_info = get_slot_info,
 	.get_current_slot = get_current_slot,
 	.set_active_slot = set_active_slot,
-	.set_slot_unbootable = set_slot_unbootable,
-	.mark_boot_attempt = mark_boot_attempt,
-	.reinitialize = reinitialize,
-	.get_boot_reason = get_boot_reason,
-	.set_boot_reason = set_boot_reason,
-	.flush = flush_changes,
 };
 
 efi_status_t gbl_efi_boot_control_register(void)

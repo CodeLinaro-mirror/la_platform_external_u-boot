@@ -7,7 +7,7 @@
 
 #include <efi_api.h>
 
-#define GBL_EFI_BOOT_CONTROL_REVISION 0x00010000
+#define GBL_EFI_BOOT_CONTROL_REVISION 0x00000100
 
 enum gbl_efi_unbootable_reason {
 	UNKNOWN_REASON = 0,
@@ -17,20 +17,6 @@ enum gbl_efi_unbootable_reason {
 	VERIFICATION_FAILURE,
 };
 
-enum gbl_efi_boot_reason {
-	EMPTY_EFI_BOOT_REASON = 0,
-	UNKNOWN_EFI_BOOT_REASON = 1,
-	WATCHDOG = 14,
-	KERNEL_PANIC = 15,
-	RECOVERY = 3,
-	BOOTLOADER = 55,
-	COLD = 56,
-	HARD = 57,
-	WARM = 58,
-	SHUTDOWN,
-	REBOOT = 18,
-};
-
 struct efi_gbl_slot_info {
 	/* One UTF-8 encoded single character */
 	u32 suffix;
@@ -38,17 +24,9 @@ struct efi_gbl_slot_info {
 	 will be interpreted as UNKNOWN_REASON. */
 	u32 unbootable_reason;
 	u8 priority;
-	u8 tries;
+	u8 remaining_tries;
 	/* Value of 1 if slot has successfully booted. */
 	u8 successful;
-	u8 merge_status;
-};
-
-struct efi_gbl_slot_metadata_block {
-	/* Value of 1 if persistent metadata tracks slot unbootable reasons. */
-	u8 unbootable_metadata;
-	u8 max_retries;
-	u8 slot_count;
 };
 
 extern const efi_guid_t gbl_efi_boot_control_guid;
@@ -56,9 +34,6 @@ extern const efi_guid_t gbl_efi_boot_control_guid;
 struct gbl_efi_boot_control_protocol {
 	u64 revision;
 	/* Slot metadata query methods */
-	efi_status_t(EFIAPI *load_boot_data)(
-		/* in */ struct gbl_efi_boot_control_protocol *,
-		/* out */ struct efi_gbl_slot_metadata_block *);
 	efi_status_t(EFIAPI *get_slot_info)(
 		/* in */ struct gbl_efi_boot_control_protocol *, /* in */ u8,
 		/* out */ struct efi_gbl_slot_info *);
@@ -68,22 +43,6 @@ struct gbl_efi_boot_control_protocol {
 	/* Slot metadata manipulation methods */
 	efi_status_t(EFIAPI *set_active_slot)(
 		/* in */ struct gbl_efi_boot_control_protocol *, /* in */ u8);
-	efi_status_t(EFIAPI *set_slot_unbootable)(
-		/* in */ struct gbl_efi_boot_control_protocol *, /* in */ u8,
-		/* in */ u32);
-	efi_status_t(EFIAPI *mark_boot_attempt)(
-		/* in */ struct gbl_efi_boot_control_protocol *);
-	efi_status_t(EFIAPI *reinitialize)(
-		/* in */ struct gbl_efi_boot_control_protocol *);
-	/* Miscellaneous methods  */
-	efi_status_t(EFIAPI *get_boot_reason)(
-		/* in */ struct gbl_efi_boot_control_protocol *,
-		/* out */ u32 *,
-		/* in-out */ size_t *, /* out */ u8 *);
-	efi_status_t(EFIAPI *set_boot_reason)(
-		/* in */ struct gbl_efi_boot_control_protocol *, /* in */ u32,
-		/* in */ size_t, /* in */ const u8 *);
-	efi_status_t(EFIAPI *flush)(/* in */ struct gbl_efi_boot_control_protocol *);
 };
 
 efi_status_t gbl_efi_boot_control_register(void);
