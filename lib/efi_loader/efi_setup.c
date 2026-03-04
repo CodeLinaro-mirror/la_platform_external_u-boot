@@ -346,9 +346,9 @@ efi_status_t efi_init_obj_list(void)
 		goto out;
 
 	if (IS_ENABLED(CONFIG_GBL_EFI_BOOT_CONTROL_PROTOCOL)) {
-		ret = efi_gbl_ab_register();
+		ret = gbl_efi_boot_control_register();
 		if (ret != EFI_SUCCESS) {
-			log_err("AB_PROTOCOL initialization error\n");
+			log_err("GBL_EFI_BOOT_CONTROL_PROTOCOL initialization error\n");
 			goto out;
 		}
 	}

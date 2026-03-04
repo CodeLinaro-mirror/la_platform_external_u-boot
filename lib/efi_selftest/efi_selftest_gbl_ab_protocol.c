@@ -15,7 +15,7 @@
 #include <string.h>
 
 static struct efi_boot_services *boot_services;
-static struct efi_gbl_slot_protocol *protocol;
+static struct gbl_efi_boot_control_protocol *protocol;
 
 static int setup(const efi_handle_t handle,
 		 const struct efi_system_table *systable)
