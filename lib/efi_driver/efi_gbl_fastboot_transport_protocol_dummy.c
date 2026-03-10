@@ -62,8 +62,12 @@ static efi_status_t EFIAPI stop(struct efi_gbl_fastboot_transport_protocol *this
 	if (this != &efi_gbl_fastboot_transport_dummy_proto) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
+	if (!cyclic_info) {
+		return EFI_EXIT(EFI_NOT_STARTED);
+	}
 
 	cyclic_unregister(cyclic_info);
+	cyclic_info = NULL;
 	membuff_uninit(&ctx.mb);
 
 	return EFI_EXIT(EFI_SUCCESS);
