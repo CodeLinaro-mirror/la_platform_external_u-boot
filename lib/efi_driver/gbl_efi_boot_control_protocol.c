@@ -19,6 +19,7 @@
 #include <u-boot/crc.h>
 
 #define INITIAL_SLOT_PRIORITY 15
+#define INITIAL_SLOT_TRIES_REMAINING 7
 
 static const char *device_name = "virtio";
 static const char *ab_partition_name = "misc";
@@ -30,10 +31,7 @@ static struct gbl_efi_boot_control_protocol efi_gbl_slot_proto;
 
 static u8 *buffer;
 
-#define COMMAND_LEN 32
-static char command[COMMAND_LEN];
 static struct bootloader_control __aligned(ARCH_DMA_MINALIGN) android_metadata;
-static bool dirty;
 static bool data_loaded;
 
 u32 calculate_metadata_checksum(const struct bootloader_control *data)
@@ -92,16 +90,9 @@ static efi_status_t load_boot_data(void)
 		return EFI_SUCCESS;
 	}
 
-	long res = blk_dread(block_device, ab_partition.start, 1, buffer);
-
-	if (res != 1) {
-		log_err("Failed to read bootloader command: %l\n", res);
-		return EFI_DEVICE_ERROR;
-	}
-	memcpy(command, buffer, COMMAND_LEN);
-
 	struct disk_offset offset =
 		byte_offset_to_blocks(2048, ab_partition.blksz);
+	long res;
 	res = blk_dread(block_device, ab_partition.start + offset.blocks, 1,
 			buffer);
 
@@ -110,7 +101,6 @@ static efi_status_t load_boot_data(void)
 		return EFI_DEVICE_ERROR;
 	}
 
-	dirty = false;
 	data_loaded = true;
 	memcpy(&android_metadata, buffer + offset.remaining_bytes,
 	       sizeof(android_metadata));
@@ -124,11 +114,32 @@ static efi_status_t load_boot_data(void)
 }
 
 static efi_status_t EFIAPI
-get_slot_info(struct gbl_efi_boot_control_protocol *this, u8 idx,
+get_slot_count(struct gbl_efi_boot_control_protocol *self, uint8_t *slot_count)
+{
+	EFI_ENTRY("%p, %p", self, slot_count);
+	if (self != &efi_gbl_slot_proto || !slot_count) {
+		return EFI_EXIT(EFI_INVALID_PARAMETER);
+	}
+
+	efi_status_t res = ensure_buffer_initialized();
+	if (res != EFI_SUCCESS)
+		return EFI_EXIT(res);
+
+	res = load_boot_data();
+	if (res != EFI_SUCCESS)
+		return EFI_EXIT(res);
+
+	*slot_count = android_metadata.nb_slot;
+
+	return EFI_EXIT(EFI_SUCCESS);
+}
+
+static efi_status_t EFIAPI
+get_slot_info(struct gbl_efi_boot_control_protocol *self, u8 idx,
 	      struct efi_gbl_slot_info *info)
 {
-	EFI_ENTRY("%p, %uc, %p", this, idx, info);
-	if (this != &efi_gbl_slot_proto || !info) {
+	EFI_ENTRY("%p, %uc, %p", self, idx, info);
+	if (self != &efi_gbl_slot_proto || !info) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
@@ -158,9 +169,9 @@ get_slot_info(struct gbl_efi_boot_control_protocol *this, u8 idx,
 }
 
 static efi_status_t
-get_current_slot_idx(struct gbl_efi_boot_control_protocol *this, u8 *idx)
+get_current_slot_idx(struct gbl_efi_boot_control_protocol *self, u8 *idx)
 {
-	if (this != &efi_gbl_slot_proto || !idx) {
+	if (self != &efi_gbl_slot_proto || !idx) {
 		return EFI_INVALID_PARAMETER;
 	}
 
@@ -193,10 +204,10 @@ get_current_slot_idx(struct gbl_efi_boot_control_protocol *this, u8 *idx)
 }
 
 static efi_status_t EFIAPI
-get_current_slot(struct gbl_efi_boot_control_protocol *this,
+get_current_slot(struct gbl_efi_boot_control_protocol *self,
 		 struct efi_gbl_slot_info *info)
 {
-	EFI_ENTRY("%p, %p", this, info);
+	EFI_ENTRY("%p, %p", self, info);
 	if (!info) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
@@ -206,7 +217,7 @@ get_current_slot(struct gbl_efi_boot_control_protocol *this,
 	if (res != EFI_SUCCESS)
 		return EFI_EXIT(res);
 
-	res = get_current_slot_idx(this, &idx);
+	res = get_current_slot_idx(self, &idx);
 	if (res != EFI_SUCCESS)
 		return EFI_EXIT(res);
 
@@ -222,23 +233,13 @@ get_current_slot(struct gbl_efi_boot_control_protocol *this,
 }
 
 static efi_status_t EFIAPI
-flush_changes(struct gbl_efi_boot_control_protocol *this)
+flush_changes(struct gbl_efi_boot_control_protocol *self)
 {
-	EFI_ENTRY("%p", this);
+	EFI_ENTRY("%p", self);
 
 	efi_status_t res = ensure_buffer_initialized();
 	if (res != EFI_SUCCESS)
 		return EFI_EXIT(res);
-
-	if (!dirty) {
-		return EFI_EXIT(EFI_SUCCESS);
-	}
-
-	memset(buffer, 0, block_device->blksz);
-	memcpy(buffer, command, COMMAND_LEN);
-	if (blk_dwrite(block_device, ab_partition.start, 1, buffer) != 1) {
-		return EFI_EXIT(EFI_DEVICE_ERROR);
-	}
 
 	android_metadata.crc32_le =
 		calculate_metadata_checksum(&android_metadata);
@@ -252,15 +253,14 @@ flush_changes(struct gbl_efi_boot_control_protocol *this)
 		return EFI_EXIT(EFI_DEVICE_ERROR);
 	}
 
-	dirty = false;
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
 static efi_status_t EFIAPI
-set_active_slot(struct gbl_efi_boot_control_protocol *this, u8 idx)
+set_active_slot(struct gbl_efi_boot_control_protocol *self, u8 idx)
 {
-	EFI_ENTRY("%p, %uc", this, idx);
-	if (this != &efi_gbl_slot_proto) {
+	EFI_ENTRY("%p, %uc", self, idx);
+	if (self != &efi_gbl_slot_proto) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
@@ -280,7 +280,7 @@ set_active_slot(struct gbl_efi_boot_control_protocol *this, u8 idx)
 		struct slot_metadata *slot = &android_metadata.slot_info[i];
 
 		if (i == idx) {
-			slot->tries_remaining = 7;
+			slot->tries_remaining = INITIAL_SLOT_TRIES_REMAINING;
 			slot->priority = INITIAL_SLOT_PRIORITY;
 			slot->successful_boot = 0;
 		} else {
@@ -288,8 +288,7 @@ set_active_slot(struct gbl_efi_boot_control_protocol *this, u8 idx)
 		}
 	}
 
-	dirty = true;
-	res = flush_changes(this);
+	res = flush_changes(self);
 	if (res != EFI_SUCCESS) {
 		return EFI_EXIT(res);
 	}
@@ -297,11 +296,50 @@ set_active_slot(struct gbl_efi_boot_control_protocol *this, u8 idx)
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
+static efi_status_t EFIAPI
+get_one_shot_boot_mode(struct gbl_efi_boot_control_protocol *self,
+		       enum gbl_efi_one_shot_boot_mode *mode)
+{
+	EFI_ENTRY("%p, %p", self, mode);
+	if (self != &efi_gbl_slot_proto || !mode) {
+		return EFI_EXIT(EFI_INVALID_PARAMETER);
+	}
+
+	/*
+	 * TODO: GBL_EFI_BOOT_CONTROL_PROTOCOL.GetOneShotBootMode()
+	 * must only be used for one-shot, non-persistent boot modes triggered
+	 * by the user (e.g., the user holding the volume-down button during
+	 * boot). We should not rely on persistent storage to determine a
+	 * one-shot boot mode. Refer to the GBL documentation for this method.
+	 *
+	 * A serial console input-based implementation of this method (similar
+	 * to the serial-based fastboot transport) could serve as a better
+	 * reference implementation.
+	 */
+	return EFI_EXIT(EFI_UNSUPPORTED);
+}
+
+/* TODO: implement */
+static efi_status_t EFIAPI
+handle_loaded_os(struct gbl_efi_boot_control_protocol *self,
+		 const struct gbl_efi_loaded_os *os)
+{
+	EFI_ENTRY("%p, %p", self, os);
+	if (self != &efi_gbl_slot_proto || !os) {
+		return EFI_EXIT(EFI_INVALID_PARAMETER);
+	}
+
+	return EFI_EXIT(EFI_UNSUPPORTED);
+}
+
 static struct gbl_efi_boot_control_protocol efi_gbl_slot_proto = {
 	.revision = GBL_EFI_BOOT_CONTROL_REVISION,
+	.get_slot_count = get_slot_count,
 	.get_slot_info = get_slot_info,
 	.get_current_slot = get_current_slot,
 	.set_active_slot = set_active_slot,
+	.get_one_shot_boot_mode = get_one_shot_boot_mode,
+	.handle_loaded_os = handle_loaded_os,
 };
 
 efi_status_t gbl_efi_boot_control_register(void)

@@ -10,11 +10,17 @@
 #define GBL_EFI_BOOT_CONTROL_REVISION 0x00000100
 
 enum gbl_efi_unbootable_reason {
-	UNKNOWN_REASON = 0,
-	NO_MORE_TRIES,
-	SYSTEM_UPDATE,
-	USER_REQUESTED,
-	VERIFICATION_FAILURE,
+	GBL_EFI_UNBOOTABLE_REASON_UNKNOWN_REASON = 0,
+	GBL_EFI_UNBOOTABLE_REASON_NO_MORE_TRIES,
+	GBL_EFI_UNBOOTABLE_REASON_SYSTEM_UPDATE,
+	GBL_EFI_UNBOOTABLE_REASON_USER_REQUESTED,
+	GBL_EFI_UNBOOTABLE_REASON_VERIFICATION_FAILURE,
+};
+
+enum gbl_efi_one_shot_boot_mode {
+	GBL_EFI_ONE_SHOT_BOOT_MODE_NONE = 0,
+	GBL_EFI_ONE_SHOT_BOOT_MODE_BOOTLOADER,
+	GBL_EFI_ONE_SHOT_BOOT_MODE_RECOVERY,
 };
 
 struct efi_gbl_slot_info {
@@ -22,11 +28,22 @@ struct efi_gbl_slot_info {
 	u32 suffix;
 	/* Any value other than those explicitly enumerated in EFI_UNBOOTABLE_REASON
 	 will be interpreted as UNKNOWN_REASON. */
-	u32 unbootable_reason;
+	u8 unbootable_reason;
 	u8 priority;
+	/* Number of remaining tries to attempt to boot the slot */
 	u8 remaining_tries;
 	/* Value of 1 if slot has successfully booted. */
 	u8 successful;
+};
+
+struct gbl_efi_loaded_os {
+	u64 kernel_size;
+	u64 kernel;
+	u64 ramdisk_size;
+	u64 ramdisk;
+	u64 device_tree_size;
+	u64 device_tree;
+	u64 reserved[8];
 };
 
 extern const efi_guid_t gbl_efi_boot_control_guid;
@@ -34,15 +51,27 @@ extern const efi_guid_t gbl_efi_boot_control_guid;
 struct gbl_efi_boot_control_protocol {
 	u64 revision;
 	/* Slot metadata query methods */
+	efi_status_t(EFIAPI *get_slot_count)(
+		struct gbl_efi_boot_control_protocol *self,
+		/* out */ u8 *slot_count);
 	efi_status_t(EFIAPI *get_slot_info)(
-		/* in */ struct gbl_efi_boot_control_protocol *, /* in */ u8,
-		/* out */ struct efi_gbl_slot_info *);
+		/* in */ struct gbl_efi_boot_control_protocol *self,
+		/* in */ u8 idx,
+		/* out */ struct efi_gbl_slot_info *info);
 	efi_status_t(EFIAPI *get_current_slot)(
-		/* in */ struct gbl_efi_boot_control_protocol *,
-		/* out */ struct efi_gbl_slot_info *);
+		/* in */ struct gbl_efi_boot_control_protocol *self,
+		/* out */ struct efi_gbl_slot_info *info);
 	/* Slot metadata manipulation methods */
 	efi_status_t(EFIAPI *set_active_slot)(
-		/* in */ struct gbl_efi_boot_control_protocol *, /* in */ u8);
+		/* in */ struct gbl_efi_boot_control_protocol *self,
+		/* in */ u8 idx);
+	/* Boot control methods */
+	efi_status_t(EFIAPI *get_one_shot_boot_mode)(
+		struct gbl_efi_boot_control_protocol *self,
+		/* out */ enum gbl_efi_one_shot_boot_mode *mode);
+	efi_status_t(EFIAPI *handle_loaded_os)(
+		struct gbl_efi_boot_control_protocol *self,
+		/* in */ const struct gbl_efi_loaded_os *os);
 };
 
 efi_status_t gbl_efi_boot_control_register(void);
