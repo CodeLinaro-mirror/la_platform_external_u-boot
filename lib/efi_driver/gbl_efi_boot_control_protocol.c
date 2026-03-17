@@ -222,6 +222,41 @@ get_current_slot(struct gbl_efi_boot_control_protocol *this,
 }
 
 static efi_status_t EFIAPI
+flush_changes(struct gbl_efi_boot_control_protocol *this)
+{
+	EFI_ENTRY("%p", this);
+
+	efi_status_t res = ensure_buffer_initialized();
+	if (res != EFI_SUCCESS)
+		return EFI_EXIT(res);
+
+	if (!dirty) {
+		return EFI_EXIT(EFI_SUCCESS);
+	}
+
+	memset(buffer, 0, block_device->blksz);
+	memcpy(buffer, command, COMMAND_LEN);
+	if (blk_dwrite(block_device, ab_partition.start, 1, buffer) != 1) {
+		return EFI_EXIT(EFI_DEVICE_ERROR);
+	}
+
+	android_metadata.crc32_le =
+		calculate_metadata_checksum(&android_metadata);
+	struct disk_offset offset =
+		byte_offset_to_blocks(2048, ab_partition.blksz);
+	memset(buffer, 0, block_device->blksz);
+	memcpy(buffer + offset.remaining_bytes, &android_metadata,
+	       sizeof(android_metadata));
+	if (blk_dwrite(block_device, ab_partition.start + offset.blocks, 1,
+		       buffer) != 1) {
+		return EFI_EXIT(EFI_DEVICE_ERROR);
+	}
+
+	dirty = false;
+	return EFI_EXIT(EFI_SUCCESS);
+}
+
+static efi_status_t EFIAPI
 set_active_slot(struct gbl_efi_boot_control_protocol *this, u8 idx)
 {
 	EFI_ENTRY("%p, %uc", this, idx);
@@ -254,41 +289,11 @@ set_active_slot(struct gbl_efi_boot_control_protocol *this, u8 idx)
 	}
 
 	dirty = true;
-	return EFI_EXIT(EFI_SUCCESS);
-}
-
-static efi_status_t EFIAPI
-flush_changes(struct gbl_efi_boot_control_protocol *this)
-{
-	EFI_ENTRY("%p", this);
-
-	efi_status_t res = ensure_buffer_initialized();
-	if (res != EFI_SUCCESS)
+	res = flush_changes(this);
+	if (res != EFI_SUCCESS) {
 		return EFI_EXIT(res);
-
-	if (!dirty) {
-		return EFI_EXIT(EFI_SUCCESS);
 	}
 
-	memset(buffer, 0, block_device->blksz);
-	memcpy(buffer, command, COMMAND_LEN);
-	if (blk_dwrite(block_device, ab_partition.start, 1, buffer) != 1) {
-		return EFI_EXIT(EFI_DEVICE_ERROR);
-	}
-
-	android_metadata.crc32_le =
-		calculate_metadata_checksum(&android_metadata);
-	struct disk_offset offset =
-		byte_offset_to_blocks(2048, ab_partition.blksz);
-	memset(buffer, 0, block_device->blksz);
-	memcpy(buffer + offset.remaining_bytes, &android_metadata,
-	       sizeof(android_metadata));
-	if (blk_dwrite(block_device, ab_partition.start + offset.blocks, 1,
-		       buffer) != 1) {
-		return EFI_EXIT(EFI_DEVICE_ERROR);
-	}
-
-	dirty = false;
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
