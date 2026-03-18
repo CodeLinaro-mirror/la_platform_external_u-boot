@@ -274,14 +274,11 @@ get_current_slot(struct gbl_efi_boot_control_protocol *self,
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
-static efi_status_t EFIAPI
-flush_changes(struct gbl_efi_boot_control_protocol *self)
+static efi_status_t flush_changes(void)
 {
-	EFI_ENTRY("%p", self);
-
 	efi_status_t res = ensure_buffer_initialized();
 	if (res != EFI_SUCCESS)
-		return EFI_EXIT(res);
+		return res;
 
 	android_metadata.crc32_le =
 		calculate_metadata_checksum(&android_metadata);
@@ -292,10 +289,10 @@ flush_changes(struct gbl_efi_boot_control_protocol *self)
 	       sizeof(android_metadata));
 	if (blk_dwrite(block_device, ab_partition.start + offset.blocks, 1,
 		       buffer) != 1) {
-		return EFI_EXIT(EFI_DEVICE_ERROR);
+		return EFI_DEVICE_ERROR;
 	}
 
-	return EFI_EXIT(EFI_SUCCESS);
+	return EFI_SUCCESS;
 }
 
 static efi_status_t EFIAPI
@@ -330,7 +327,7 @@ set_active_slot(struct gbl_efi_boot_control_protocol *self, u8 idx)
 		}
 	}
 
-	res = flush_changes(self);
+	res = flush_changes();
 	if (res != EFI_SUCCESS) {
 		return EFI_EXIT(res);
 	}
