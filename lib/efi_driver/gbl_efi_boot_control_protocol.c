@@ -84,6 +84,44 @@ struct disk_offset byte_offset_to_blocks(size_t byte_offset, ulong blksize)
 	return ret;
 }
 
+static efi_status_t initialize_misc_partition(struct disk_offset offset)
+{
+	const struct slot_metadata metadata = {
+		.priority = INITIAL_SLOT_PRIORITY,
+		.tries_remaining = INITIAL_SLOT_TRIES_REMAINING,
+		.successful_boot = 0,
+		.verity_corrupted = 0,
+		.reserved = 0
+	};
+
+	log_warning("On-disk AB metadata corrupted, initializing defaults\n");
+
+	memset(&android_metadata, 0, sizeof(android_metadata));
+	memcpy(android_metadata.slot_suffix, "_a\0\0", 4);
+	android_metadata.magic = BOOT_CTRL_MAGIC;
+	android_metadata.version = BOOT_CTRL_VERSION;
+	android_metadata.nb_slot = 2;
+	for (int i = 0; i < android_metadata.nb_slot; ++i) {
+		android_metadata.slot_info[i] = metadata;
+
+		if (i != 0)
+			android_metadata.slot_info[i].priority =
+				metadata.priority - 1;
+	}
+
+	android_metadata.crc32_le =
+		calculate_metadata_checksum(&android_metadata);
+	memset(buffer, 0, block_device->blksz);
+	memcpy(buffer + offset.remaining_bytes, &android_metadata,
+	       sizeof(android_metadata));
+	if (blk_dwrite(block_device, ab_partition.start + offset.blocks, 1,
+		       buffer) != 1) {
+		log_err("Failed to write initialized AB metadata\n");
+		return EFI_DEVICE_ERROR;
+	}
+	return EFI_SUCCESS;
+}
+
 static efi_status_t load_boot_data(void)
 {
 	if (data_loaded) {
@@ -106,8 +144,7 @@ static efi_status_t load_boot_data(void)
 	       sizeof(android_metadata));
 	if (calculate_metadata_checksum(&android_metadata) !=
 	    android_metadata.crc32_le) {
-		log_warning("On-disk AB metadata corrupted\n");
-		return EFI_CRC_ERROR;
+		return initialize_misc_partition(offset);
 	}
 
 	return EFI_SUCCESS;
@@ -159,8 +196,11 @@ get_slot_info(struct gbl_efi_boot_control_protocol *self, u8 idx,
 
 	struct slot_metadata const *slot = &android_metadata.slot_info[idx];
 
-	info->suffix = android_metadata.slot_suffix[idx];
-	info->unbootable_reason = 0;
+	info->suffix = 'a' + idx;
+	info->unbootable_reason =
+		(slot->tries_remaining == 0 && slot->successful_boot == 0) ?
+			GBL_EFI_UNBOOTABLE_REASON_NO_MORE_TRIES :
+			GBL_EFI_UNBOOTABLE_REASON_UNKNOWN_REASON;
 	info->priority = slot->priority;
 	info->remaining_tries = slot->tries_remaining;
 	info->successful = slot->successful_boot;
@@ -182,22 +222,24 @@ get_current_slot_idx(struct gbl_efi_boot_control_protocol *self, u8 *idx)
 	res = load_boot_data();
 	if (res != EFI_SUCCESS)
 		return res;
-
+	bool found = false;
 	u8 max_idx = 0;
 
-	for (int i = 1; i < android_metadata.nb_slot; i++) {
-		struct slot_metadata *max =
-			&android_metadata.slot_info[max_idx];
+	for (int i = 0; i < android_metadata.nb_slot; i++) {
 		struct slot_metadata *slot = &android_metadata.slot_info[i];
 
-		if ((slot->tries_remaining || slot->successful_boot) &&
-		    (slot->priority > max->priority ||
-		     (slot->priority == max->priority &&
-		      android_metadata.slot_suffix[i] <
-			      android_metadata.slot_suffix[max_idx]))) {
-			max_idx = i;
+		if (slot->tries_remaining || slot->successful_boot) {
+			if (!found ||
+			    slot->priority > android_metadata.slot_info[max_idx]
+						     .priority) {
+				max_idx = i;
+				found = true;
+			}
 		}
 	}
+
+	if (!found)
+		return EFI_NOT_FOUND;
 
 	*idx = max_idx;
 	return EFI_SUCCESS;
@@ -223,8 +265,8 @@ get_current_slot(struct gbl_efi_boot_control_protocol *self,
 
 	struct slot_metadata const *slot = &android_metadata.slot_info[idx];
 
-	info->suffix = android_metadata.slot_suffix[idx];
-	info->unbootable_reason = 0;
+	info->suffix = 'a' + idx;
+	info->unbootable_reason = GBL_EFI_UNBOOTABLE_REASON_UNKNOWN_REASON;
 	info->priority = slot->priority;
 	info->remaining_tries = slot->tries_remaining;
 	info->successful = slot->successful_boot;
