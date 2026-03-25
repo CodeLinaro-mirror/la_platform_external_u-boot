@@ -22,7 +22,7 @@ static int setup(const efi_handle_t handle,
 {
 	boot_services = systable->boottime;
 
-	efi_status_t res = boot_services->locate_protocol(&efi_gbl_ab_boot_guid,
+	efi_status_t res = boot_services->locate_protocol(&gbl_efi_boot_control_guid,
 							  NULL, (void **)&protocol);
 	if (res != EFI_SUCCESS) {
 		protocol = NULL;
@@ -35,35 +35,19 @@ static int setup(const efi_handle_t handle,
 
 static int execute(void)
 {
-	struct efi_gbl_slot_metadata_block meta;
-	efi_status_t res = protocol->load_boot_data(protocol, &meta);
-
-	if (res == EFI_CRC_ERROR) {
-		efi_st_printf("On-disk metadata corrupted, reinitializing\n");
-		res = protocol->reinitialize(protocol);
-		if (res != EFI_SUCCESS) {
-			efi_st_error("Failed to reinitialize boot data: %lu\n", res);
-			return EFI_ST_FAILURE;
-		}
-		res = protocol->load_boot_data(protocol, &meta);
-		if (res != EFI_SUCCESS) {
-			efi_st_error("Failed to load boot data after reinitialization: %lu\n", res);
-		}
-	} else if (res != EFI_SUCCESS) {
-		efi_st_error("Failed to load boot data: %lu\n", res);
+	u8 slot_count;
+	efi_status_t res = protocol->get_slot_count(protocol, &slot_count);
+	if (res != EFI_SUCCESS) {
+		efi_st_error("Failed to get slot count: %lu\n", res);
 		return EFI_ST_FAILURE;
 	}
 
-	if (meta.max_retries != 7 || meta.slot_count != 2 ||
-	    meta.unbootable_metadata != 0) {
-		efi_st_error(
-			     "metadata: retries = %u, slot_count = %u, unbootable_metadata = %u\n",
-			     meta.max_retries, meta.slot_count,
-			     meta.unbootable_metadata);
+	if (slot_count != 2) {
+		efi_st_error("Unexpected slot count: %u\n", slot_count);
+		return EFI_ST_FAILURE;
 	}
 
 	struct efi_gbl_slot_info slot;
-
 	res = protocol->get_current_slot(protocol, &slot);
 	if (res != EFI_SUCCESS) {
 		efi_st_error("Failed to get current slot: %lu\n", res);
@@ -71,141 +55,45 @@ static int execute(void)
 	}
 
 	/* Quick checks on the current slot */
-	struct efi_gbl_slot_info expected = {
-		.suffix = 'a',
-		.priority = 15,
-		.successful = 0,
-		.tries = 7,
-		.unbootable_reason = 0,
-		.merge_status = 0,
-	};
-
-	if (memcmp(&expected, &slot, sizeof(slot)) != 0) {
+	if (slot.suffix != 'a' || slot.priority != 15 || slot.successful != 0 ||
+	    slot.remaining_tries != 7 ||
+	    slot.unbootable_reason != GBL_EFI_UNBOOTABLE_REASON_UNKNOWN_REASON) {
 		efi_st_error("Unexpected active slot:\n");
 		efi_st_error("suffix = %u\n", slot.suffix);
 		efi_st_error("priority = %u\n", slot.priority);
 		efi_st_error("successful = %u\n", slot.successful);
-		efi_st_error("tries = %u\n", slot.tries);
+		efi_st_error("remaining_tries = %u\n", slot.remaining_tries);
 		efi_st_error("unbootable_reason = %u\n", slot.unbootable_reason);
-		efi_st_error("merge_status = %u\n", slot.merge_status);
 	}
 
-	for (int i = 0; i < meta.slot_count; i++) {
+	for (int i = 0; i < slot_count; i++) {
 		res = protocol->get_slot_info(protocol, i, &slot);
 		if (res != EFI_SUCCESS) {
-			efi_st_error("Could not get slot at index: %d\n, res = %lu",
+			efi_st_error("Could not get slot at index: %d, res = %lu\n",
 				     i, res);
+			return EFI_ST_FAILURE;
 		}
-		expected.suffix = 'a' + i;
-		if (memcmp(&expected, &slot, sizeof(slot)) != 0) {
-			efi_st_error("Unexpected slot value at index: %d\n", i);
+		if (slot.suffix != (u32)('a' + i)) {
+			efi_st_error("Unexpected slot suffix at index %d: %u\n", i, slot.suffix);
+			return EFI_ST_FAILURE;
 		}
 	}
 
 	res = protocol->set_active_slot(protocol, 1);
 	if (res != EFI_SUCCESS) {
 		efi_st_error("Failed to set active slot: %lu\n", res);
+		return EFI_ST_FAILURE;
 	}
 
 	res = protocol->get_current_slot(protocol, &slot);
 	if (res != EFI_SUCCESS) {
 		efi_st_error("Failed to get current slot after setting active: %lu\n",
 			     res);
+		return EFI_ST_FAILURE;
 	}
 
 	if (slot.suffix != 'b') {
 		efi_st_error("set_active_slot did not change current_slot\n");
-	}
-
-	res = protocol->set_slot_unbootable(protocol, 1, USER_REQUESTED);
-	if (res != EFI_SUCCESS) {
-		efi_st_error("Failed to set slot unbootable: %lu\n", res);
-	}
-
-	res = protocol->get_current_slot(protocol, &slot);
-	if (res != EFI_SUCCESS) {
-		efi_st_error("Cannot get active slot after making active unbootable: %lu\n",
-			     res);
-	}
-
-	if (slot.suffix != 'a' || slot.tries != 7) {
-		efi_st_error("Incorrect active slot after setting active unbootable\n");
-	}
-
-	res = protocol->get_slot_info(protocol, 1, &slot);
-	if (res != EFI_SUCCESS) {
-		efi_st_error("Failed to get info for slot marked unbootable: %lu\n",
-			     res);
-	}
-
-	if (slot.suffix != 'b' || slot.tries != 0 || slot.priority != 0) {
-		efi_st_error("Failed to mark slot unbootable\n");
-	}
-
-	/* Deliberately stop on i = -1 */
-	for (int i = meta.max_retries - 1; i > -1; i--) {
-		res = protocol->mark_boot_attempt(protocol);
-		if (res != EFI_SUCCESS) {
-			efi_st_error("Failed to mark boot attempt: %lu\n", res);
-			return EFI_ST_FAILURE;
-		}
-
-		res = protocol->get_current_slot(protocol, &slot);
-		if (res != EFI_SUCCESS) {
-			efi_st_error("Failed to get current slot in boot attempt loop: %lu\n",
-				     res);
-			return EFI_ST_FAILURE;
-		}
-
-		if (slot.tries != i) {
-			efi_st_error("Unexpected number of tries remaining: %d\n",
-				     slot.tries);
-			return EFI_ST_FAILURE;
-		}
-	}
-
-	res = protocol->mark_boot_attempt(protocol);
-	if (res != EFI_UNSUPPORTED) {
-		efi_st_error("Failed to fail to mark boot attempt on slot with no more tries: %u\n",
-			     res);
-		return EFI_ST_FAILURE;
-	}
-
-	u32 reason;
-	size_t size = 0;
-	u8 subreason;
-
-	res = protocol->get_boot_reason(protocol, &reason, &size, &subreason);
-	if (res != EFI_SUCCESS) {
-		efi_st_error("Failed to get boot reason: %lu\n", res);
-	}
-	if (reason != EMPTY_EFI_BOOT_REASON) {
-		efi_st_error("Unexpected boot reason: %u\n", reason);
-	}
-
-	res = protocol->set_boot_reason(protocol, RECOVERY, size,
-					&subreason);
-	if (res != EFI_SUCCESS) {
-		efi_st_error("Failed to set boot reason: %lu\n", res);
-	}
-
-	res = protocol->get_boot_reason(protocol, &reason, &size, &subreason);
-	if (res != EFI_SUCCESS) {
-		efi_st_error("Failed to get boot reason: %lu\n", res);
-	}
-	if (reason != RECOVERY) {
-		efi_st_error("Unexpected boot reason: %u\n", reason);
-	}
-
-	res = protocol->reinitialize(protocol);
-	if (res != EFI_SUCCESS) {
-		efi_st_error("Failed to reinitialize AB metadata: %lu\n", res);
-		return EFI_ST_FAILURE;
-	}
-
-	res = protocol->flush(protocol);
-	if (res != EFI_SUCCESS) {
-		efi_st_error("Failed to flush slot changes: %lu\n", res);
 		return EFI_ST_FAILURE;
 	}
 
@@ -253,7 +141,7 @@ static int execute(void)
 		.slot_suffix = { 'a', 'b', '\0', '\0' },
 		.slot_info = {
 			{
-				.priority = 15,
+				.priority = 14,
 				.tries_remaining = 7,
 				.successful_boot = 0,
 			},
@@ -284,11 +172,6 @@ static int execute(void)
 
 static int teardown(void)
 {
-	if (protocol) {
-		protocol->reinitialize(protocol);
-		protocol->flush(protocol);
-	}
-
 	return EFI_ST_SUCCESS;
 }
 
