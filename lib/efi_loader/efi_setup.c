@@ -9,6 +9,7 @@
 #define LOG_CATEGORY LOGC_EFI
 
 #include <efi_driver.h>
+#include <efi_dt_fixup_cf.h>
 #include <gbl_efi_boot_control_protocol.h>
 #include <efi_gbl_fastboot.h>
 #include <efi_gbl_fastboot_transport.h>
@@ -373,6 +374,14 @@ efi_status_t efi_init_obj_list(void)
 		ret = efi_gbl_os_config_register();
 		if (ret != EFI_SUCCESS) {
 			log_err("GBL_OS_CONFIGURATION initialization error\n");
+			goto out;
+		}
+	}
+
+	if (IS_ENABLED(CONFIG_EFI_DT_FIXUP_CF)) {
+		ret = efi_dt_fixup_cf_register();
+		if (ret != EFI_SUCCESS) {
+			log_err("EFI_DT_FIXUP_CF initialization error\n");
 			goto out;
 		}
 	}

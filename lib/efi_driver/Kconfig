@@ -46,3 +46,13 @@ config EFI_GBL_OS_CONFIGURATION_PROTOCOL
 	  Include the driver for the custom GBL os configuration protocol.
 	  This protocol is used to select base device trees and overlays
 	  and apply runtime fix-ups to kernel commandline and bootconfig.
+
+config EFI_DT_FIXUP_CF
+	bool "Includes Cuttlefish-specific EFI_DT_FIXUP protocol implementation"
+	depends on EFI_LOADER
+	help
+	  This is a Cuttlefish-specific option that includes the merge-based
+	  implementation for the EFI device tree fix-up protocol. This
+	  implementation is used to merge a DT provided by a firmware into a UEFI
+	  application DT. This is particularly useful in VM environments where the
+	  device tree provided by a VMM (e.g., QEMU, Crosvm) must be respected.
