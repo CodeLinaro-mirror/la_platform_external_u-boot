@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: BSD-2-Clause
-/*
+/* SPDX-License-Identifier: BSD-2-Clause
  * Copyright (C) 2024 The Android Open Source Project
  */
 
@@ -24,8 +23,9 @@ bootconfig_load_from_persistent_disk_device(char *fixup,
 	int ret = 0;
 	char devnum_str[3];
 	const char *slot_suffix = "";
-	const char *requested_partitions[] = { ANDROID_PARTITION_BOOTCONFIG,
-					       NULL };
+	static const char *const requested_partitions[] = {
+		ANDROID_PARTITION_BOOTCONFIG, NULL
+	};
 
 	sprintf(devnum_str, "%d", CONFIG_ANDROID_PERSISTENT_RAW_DISK_DEVICE);
 	ops = avb_ops_alloc("virtio", devnum_str);
@@ -42,7 +42,7 @@ bootconfig_load_from_persistent_disk_device(char *fixup,
 		if (!strcmp(ANDROID_PARTITION_BOOTCONFIG, p->partition_name))
 			avb_bootconfig_data = p;
 	}
-	if (avb_bootconfig_data == NULL) {
+	if (!avb_bootconfig_data) {
 		printf("Failed to verify bootconfig partition from persistent disk\n");
 		return EFI_LOAD_ERROR;
 	}
@@ -85,10 +85,20 @@ static efi_status_t EFIAPI select_device_trees(
 {
 	EFI_ENTRY("%p, %zu, %p", self, num_device_trees, device_trees);
 
-	if (!self)
+	if (!self || !num_device_trees || !device_trees)
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 
-	return EFI_EXIT(EFI_SUCCESS);
+	// Select first base device tree and ignore all overlays / device assignment overlays.
+	for (size_t i = 0; i < num_device_trees; i++) {
+		if (device_trees[i].metadata.type ==
+		    GBL_EFI_DEVICE_TREE_TYPE_DEVICE_TREE) {
+			device_trees[i].selected = true;
+			return EFI_EXIT(EFI_SUCCESS);
+		}
+	}
+
+	log_err("No base device tree provided, nothing to select.\n");
+	return EFI_EXIT(EFI_INVALID_PARAMETER);
 }
 
 static efi_status_t EFIAPI select_fit_configuration(
