@@ -56,3 +56,11 @@ config EFI_DT_FIXUP_CF
 	  implementation is used to merge a DT provided by a firmware into a UEFI
 	  application DT. This is particularly useful in VM environments where the
 	  device tree provided by a VMM (e.g., QEMU, Crosvm) must be respected.
+
+config GBL_EFI_FW_API_LEVEL
+	string "GBL Firmware API Level"
+	depends on EFI_LOADER
+	default ""
+	help
+	  The API level of the platform firmware, in YYYYMM format.
+	  This will be reported in the gbl_fw_api_level UEFI variable.

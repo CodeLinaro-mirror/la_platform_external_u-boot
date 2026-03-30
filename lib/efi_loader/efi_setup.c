@@ -181,6 +181,34 @@ static efi_status_t efi_init_os_indications(void)
 }
 
 /**
+ * efi_init_gbl_vars() - initialize GBL-related UEFI variables
+ *
+ * Return:	status code
+ */
+static efi_status_t efi_init_gbl_vars(void)
+{
+	efi_status_t ret = EFI_SUCCESS;
+
+#if defined(CONFIG_GBL_EFI_FW_API_LEVEL)
+	const char *api_level = CONFIG_GBL_EFI_FW_API_LEVEL;
+	efi_uintn_t len = strlen(api_level);
+	if (len > 0) {
+		ret = efi_set_variable_int(
+			u"gbl_fw_api_level", &gbl_efi_vendor_guid,
+			EFI_VARIABLE_BOOTSERVICE_ACCESS |
+				EFI_VARIABLE_RUNTIME_ACCESS |
+				EFI_VARIABLE_READ_ONLY,
+			len, api_level, false);
+		if (ret != EFI_SUCCESS)
+			goto out;
+	}
+#endif
+
+out:
+	return ret;
+}
+
+/**
  * efi_init_early() - handle initialization at early stage
  *
  * expected to be called in board_init_r().
@@ -385,6 +413,10 @@ efi_status_t efi_init_obj_list(void)
 			goto out;
 		}
 	}
+
+	ret = efi_init_gbl_vars();
+	if (ret != EFI_SUCCESS)
+		goto out;
 
 	/* Initialize EFI runtime services */
 	ret = efi_reset_system_init();

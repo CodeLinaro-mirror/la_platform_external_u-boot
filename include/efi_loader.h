@@ -311,6 +311,8 @@ extern const efi_guid_t efi_guid_host_dev;
 /* GUID of the EFI_BLOCK_IO_PROTOCOL */
 extern const efi_guid_t efi_block_io_guid;
 extern const efi_guid_t efi_global_variable_guid;
+/* GUID of GBL Vendor UEFI variables */
+extern const efi_guid_t gbl_efi_vendor_guid;
 extern const efi_guid_t efi_guid_console_control;
 extern const efi_guid_t efi_guid_device_path;
 /* GUID of the EFI system partition */
