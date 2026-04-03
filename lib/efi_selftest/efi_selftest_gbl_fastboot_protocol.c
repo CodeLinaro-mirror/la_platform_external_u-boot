@@ -4,14 +4,14 @@
 
 #include <efi.h>
 #include <efi_api.h>
-#include <efi_gbl_fastboot.h>
+#include <gbl_efi_fastboot_protocol.h>
 #include <efi_selftest.h>
 #include <string.h>
 
 static struct efi_boot_services *boot_services;
 static struct gbl_efi_fastboot_protocol *protocol;
 
-void cb_noop(void *context, const char *const *args, size_t num_args,
+void cb_noop(void *context, size_t num_args, const char *const *args,
 	     const char *val)
 {
 }
@@ -24,29 +24,29 @@ static int test_getvar(void)
 	char buf[BUF_SIZE];
 
 	const char *args[] = { "not_found" };
-	res = protocol->get_var(protocol, args, ARRAY_SIZE(args), buf,
-				&bufsize);
+	res = protocol->get_var(protocol, ARRAY_SIZE(args), args, &bufsize,
+				buf);
 	if (res != EFI_NOT_FOUND) {
 		efi_st_error("Call to get_var expected to return NOT_FOUND\n");
 		return EFI_ST_FAILURE;
 	}
 
-	res = protocol->get_var(protocol, NULL, 0, buf, &bufsize);
+	res = protocol->get_var(protocol, 0, NULL, &bufsize, buf);
 	if (res != EFI_INVALID_PARAMETER) {
 		efi_st_error(
 			"Call to get_var expected to return EFI_INVALID_PARAMETER\n");
 		return EFI_ST_FAILURE;
 	}
 
-	res = protocol->get_var(protocol, args, ARRAY_SIZE(args), NULL,
-				&bufsize);
+	res = protocol->get_var(protocol, ARRAY_SIZE(args), args, &bufsize,
+				NULL);
 	if (res != EFI_INVALID_PARAMETER) {
 		efi_st_error(
 			"Call to get_var expected to return EFI_INVALID_PARAMETER\n");
 		return EFI_ST_FAILURE;
 	}
 
-	res = protocol->get_var(protocol, args, ARRAY_SIZE(args), buf, NULL);
+	res = protocol->get_var(protocol, ARRAY_SIZE(args), args, NULL, buf);
 	if (res != EFI_INVALID_PARAMETER) {
 		efi_st_error(
 			"Call to get_var expected to return EFI_INVALID_PARAMETER\n");

@@ -4,7 +4,7 @@
 
 #include <efi.h>
 #include <efi_api.h>
-#include <efi_gbl_fastboot.h>
+#include <gbl_efi_fastboot_protocol.h>
 #include <efi_loader.h>
 #include <log.h>
 
@@ -37,7 +37,7 @@ size_t args_len(struct fastboot_var *var)
 static bool args_match_var(const char *const *args, size_t num_args,
 			   const struct fastboot_var *var)
 {
-	int i;
+	size_t i;
 	for (i = 0; i < num_args && var->args[i]; i++) {
 		if (strcmp(args[i], var->args[i])) {
 			return false;
@@ -48,10 +48,10 @@ static bool args_match_var(const char *const *args, size_t num_args,
 }
 
 static efi_status_t EFIAPI get_var(struct gbl_efi_fastboot_protocol *this,
-				   const char *const *fb_args, size_t num_args,
-				   char *buf, size_t *bufsize)
+				   size_t num_args, const char *const *fb_args,
+				   size_t *bufsize, char *buf)
 {
-	EFI_ENTRY("%p, %p, %lu, %p, %p", this, fb_args, num_args, buf, bufsize);
+	EFI_ENTRY("%p, %lu, %p, %p, %p", this, num_args, fb_args, bufsize, buf);
 	if (this != &gbl_efi_fastboot_proto || fb_args == NULL || buf == NULL ||
 	    bufsize == NULL) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
@@ -67,6 +67,7 @@ static efi_status_t EFIAPI get_var(struct gbl_efi_fastboot_protocol *this,
 			} else {
 				ret = EFI_BUFFER_TOO_SMALL;
 			}
+			*bufsize = val_len;
 			return EFI_EXIT(ret);
 		}
 	}
@@ -83,71 +84,66 @@ static efi_status_t EFIAPI get_var_all(struct gbl_efi_fastboot_protocol *this,
 	}
 
 	for (struct fastboot_var *var = &vars[0]; var->args; var++) {
-		cb(ctx, var->args, args_len(var), var->val);
+		cb(ctx, args_len(var), var->args, var->val);
 	}
 
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
 static efi_status_t EFIAPI get_staged(struct gbl_efi_fastboot_protocol *this,
-				      uint8_t *out, size_t *out_size,
-				      size_t *out_remain)
+				      size_t *bufsize, size_t *buffer_remains,
+				      uint8_t *buffer)
 {
-	EFI_ENTRY("%p, %p, %p, %p", this, out, out_size, out_remain);
-
-	return EFI_EXIT(EFI_UNSUPPORTED);
-}
-
-static efi_status_t EFIAPI set_lock(struct gbl_efi_fastboot_protocol *this,
-				    bool critical, bool lock)
-{
-	EFI_ENTRY("%p, %i, %i", this, critical, lock);
-
-	return EFI_EXIT(EFI_UNSUPPORTED);
-}
-
-static efi_status_t EFIAPI get_lock(struct gbl_efi_fastboot_protocol *this,
-				    bool critical, bool *out_lock)
-{
-	EFI_ENTRY("%p, %i, %p", this, critical, out_lock);
-
-	return EFI_EXIT(EFI_UNSUPPORTED);
-}
-
-static efi_status_t EFIAPI vendor_erase(struct gbl_efi_fastboot_protocol *this,
-					const uint8_t *part_name,
-					size_t part_name_len,
-					gbl_efi_fastboot_erase_action *action)
-{
-	EFI_ENTRY("%p, %p, %zu, %p", this, part_name, part_name_len, action);
+	EFI_ENTRY("%p, %p, %p, %p", this, bufsize, buffer_remains, buffer);
+	if (this != &gbl_efi_fastboot_proto || bufsize == NULL ||
+	    buffer_remains == NULL || buffer == NULL) {
+		return EFI_EXIT(EFI_INVALID_PARAMETER);
+	}
 
 	return EFI_EXIT(EFI_UNSUPPORTED);
 }
 
 static efi_status_t EFIAPI
 command_exec(struct gbl_efi_fastboot_protocol *this, size_t num_args,
-	     const char *const *args, size_t download_data_used_len,
-	     uint8_t *download_data, size_t download_data_full_size,
+	     const char *const *args, size_t download_buffer_size,
+	     size_t download_buffer_used_size, uint8_t *download_buffer,
 	     gbl_efi_fastboot_command_exec_result *implementation,
 	     fastboot_message_sender sender, void *ctx)
 {
-	EFI_ENTRY("%p, %zu, %p, %zu, %p, %zu, %p, %p, %p", this, num_args, args,
-		  download_data_used_len, download_data,
-		  download_data_full_size, implementation, sender, ctx);
+	EFI_ENTRY("%p, %zu, %p, %zu, %zu, %p, %p, %p, %p", this, num_args, args,
+		  download_buffer_size, download_buffer_used_size,
+		  download_buffer, implementation, sender, ctx);
+	if (this != &gbl_efi_fastboot_proto || args == NULL ||
+	    implementation == NULL || sender == NULL ||
+	    (download_buffer_size > 0 && download_buffer == NULL)) {
+		return EFI_EXIT(EFI_INVALID_PARAMETER);
+	}
+
+	*implementation = GBL_EFI_FASTBOOT_COMMAND_EXEC_RESULT_DEFAULT_IMPL;
+	return EFI_EXIT(EFI_SUCCESS);
+}
+
+static efi_status_t EFIAPI get_partition_type(
+	struct gbl_efi_fastboot_protocol *this, const char *part_name,
+	size_t *part_type_len, char *part_type)
+{
+	EFI_ENTRY("%p, %p, %p, %p", this, part_name, part_type_len, part_type);
+	if (this != &gbl_efi_fastboot_proto || part_name == NULL ||
+	    part_type_len == NULL || part_type == NULL) {
+		return EFI_EXIT(EFI_INVALID_PARAMETER);
+	}
 
 	return EFI_EXIT(EFI_UNSUPPORTED);
 }
 
 static struct gbl_efi_fastboot_protocol gbl_efi_fastboot_proto = {
-	.revision = 4,
+	.revision = GBL_EFI_FASTBOOT_PROTOCOL_REVISION,
 	.serial_number = "cuttlefish-0xCAFED00D",
 	.get_var = get_var,
 	.get_var_all = get_var_all,
 	.get_staged = get_staged,
-	.set_lock = set_lock,
-	.get_lock = get_lock,
-	.vendor_erase = vendor_erase,
 	.command_exec = command_exec,
+	.get_partition_type = get_partition_type,
 };
 
 efi_status_t efi_gbl_fastboot_register(void)
