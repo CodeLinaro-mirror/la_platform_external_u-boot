@@ -31,7 +31,7 @@ struct efi_gbl_fastboot_transport_protocol {
 		size_t *bufsize, void *buf, efi_gbl_fastboot_rx_mode mode);
 	efi_status_t(EFIAPI *send)(
 		struct efi_gbl_fastboot_transport_protocol *this,
-		size_t *bufsize, void *buf);
+		size_t *bufsize, const void *buf);
 	efi_status_t(EFIAPI *flush)(
 		struct efi_gbl_fastboot_transport_protocol *this);
 };

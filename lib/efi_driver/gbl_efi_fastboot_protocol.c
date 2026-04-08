@@ -92,7 +92,7 @@ static efi_status_t EFIAPI get_var_all(struct gbl_efi_fastboot_protocol *this,
 
 static efi_status_t EFIAPI get_staged(struct gbl_efi_fastboot_protocol *this,
 				      size_t *bufsize, size_t *buffer_remains,
-				      uint8_t *buffer)
+				      u8 *buffer)
 {
 	EFI_ENTRY("%p, %p, %p, %p", this, bufsize, buffer_remains, buffer);
 	if (this != &gbl_efi_fastboot_proto || bufsize == NULL ||
@@ -106,7 +106,7 @@ static efi_status_t EFIAPI get_staged(struct gbl_efi_fastboot_protocol *this,
 static efi_status_t EFIAPI
 command_exec(struct gbl_efi_fastboot_protocol *this, size_t num_args,
 	     const char *const *args, size_t download_buffer_size,
-	     size_t download_buffer_used_size, uint8_t *download_buffer,
+	     size_t download_buffer_used_size, u8 *download_buffer,
 	     gbl_efi_fastboot_command_exec_result *implementation,
 	     fastboot_message_sender sender, void *ctx)
 {
