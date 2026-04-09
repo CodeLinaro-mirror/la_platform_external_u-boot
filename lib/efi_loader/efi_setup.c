@@ -11,7 +11,7 @@
 #include <efi_driver.h>
 #include <efi_dt_fixup_cf.h>
 #include <gbl_efi_boot_control_protocol.h>
-#include <efi_gbl_fastboot.h>
+#include <gbl_efi_fastboot_protocol.h>
 #include <efi_gbl_fastboot_transport.h>
 #include <efi_gbl_os_configuration.h>
 #include <efi_loader.h>
