@@ -37,12 +37,12 @@ struct efi_gbl_slot_info {
 };
 
 struct gbl_efi_loaded_os {
-	u64 kernel_size;
-	u64 kernel;
-	u64 ramdisk_size;
-	u64 ramdisk;
-	u64 device_tree_size;
-	u64 device_tree;
+	size_t kernel_size;
+	efi_physical_addr_t kernel;
+	size_t ramdisk_size;
+	efi_physical_addr_t ramdisk;
+	size_t device_tree_size;
+	efi_physical_addr_t device_tree;
 	u64 reserved[8];
 };
 
