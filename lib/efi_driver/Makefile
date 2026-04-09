@@ -11,9 +11,9 @@ obj-y += efi_block_device.o
 endif
 
 obj-$(CONFIG_GBL_EFI_BOOT_CONTROL_PROTOCOL) += gbl_efi_boot_control_protocol.o
-obj-$(CONFIG_EFI_GBL_FASTBOOT_PROTOCOL) += gbl_efi_fastboot_protocol.o
-obj-$(CONFIG_EFI_GBL_FASTBOOT_TRANSPORT_PROTOCOL) += efi_gbl_fastboot_transport_protocol.o
-obj-$(CONFIG_EFI_GBL_FASTBOOT_TRANSPORT_PROTOCOL_DUMMY) += efi_gbl_fastboot_transport_protocol_dummy.o
-obj-$(CONFIG_EFI_GBL_FASTBOOT_TRANSPORT_PROTOCOL_SERIAL) += efi_gbl_fastboot_transport_protocol_interactive_serial.o
-obj-$(CONFIG_EFI_GBL_OS_CONFIGURATION_PROTOCOL) += efi_gbl_os_configuration_protocol.o
+obj-$(CONFIG_GBL_EFI_FASTBOOT_PROTOCOL) += gbl_efi_fastboot_protocol.o
+obj-$(CONFIG_GBL_EFI_FASTBOOT_TRANSPORT_PROTOCOL) += gbl_efi_fastboot_transport_protocol.o
+obj-$(CONFIG_GBL_EFI_FASTBOOT_TRANSPORT_PROTOCOL_DUMMY) += gbl_efi_fastboot_transport_protocol_dummy.o
+obj-$(CONFIG_GBL_EFI_FASTBOOT_TRANSPORT_PROTOCOL_SERIAL) += gbl_efi_fastboot_transport_protocol_interactive_serial.o
+obj-$(CONFIG_GBL_EFI_OS_CONFIGURATION_PROTOCOL) += gbl_efi_os_configuration_protocol.o
 obj-$(CONFIG_EFI_DT_FIXUP_CF) += efi_dt_fixup_cf.o

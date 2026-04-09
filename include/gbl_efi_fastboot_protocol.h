@@ -2,8 +2,8 @@
  * Copyright (C) 2025 The Android Open Source Project
  */
 
-#ifndef __EFI_GBL_FASTBOOT_H__
-#define __EFI_GBL_FASTBOOT_H__
+#ifndef __GBL_EFI_FASTBOOT_H__
+#define __GBL_EFI_FASTBOOT_H__
 
 #include <efi.h>
 #include <efi_api.h>
@@ -40,7 +40,7 @@ typedef enum {
 	GBL_EFI_FASTBOOT_COMMAND_EXEC_RESULT_CUSTOM_IMPL,
 } gbl_efi_fastboot_command_exec_result;
 
-extern const efi_guid_t efi_gbl_fastboot_guid;
+extern const efi_guid_t gbl_efi_fastboot_guid;
 
 struct gbl_efi_fastboot_protocol {
 	// Revision of the protocol supported.
@@ -85,6 +85,6 @@ struct gbl_efi_fastboot_protocol {
 		/* out */ char *part_type);
 };
 
-efi_status_t efi_gbl_fastboot_register(void);
+efi_status_t gbl_efi_fastboot_register(void);
 
-#endif /* __EFI_GBL_FASTBOOT_H__ */
+#endif /* __GBL_EFI_FASTBOOT_H__ */
