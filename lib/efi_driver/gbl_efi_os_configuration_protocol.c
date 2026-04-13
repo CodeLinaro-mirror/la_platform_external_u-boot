@@ -4,14 +4,14 @@
 
 #include <avb_verify.h>
 #include <efi_api.h>
-#include <efi_gbl_os_configuration.h>
+#include <gbl_efi_os_configuration.h>
 #include <efi_loader.h>
 #include <efi.h>
 
 #define ANDROID_PARTITION_BOOTCONFIG "bootconfig"
 
-const efi_guid_t efi_gbl_os_config_guid =
-	EFI_GBL_OS_CONFIGURATION_PROTOCOL_GUID;
+const efi_guid_t gbl_efi_os_config_guid =
+	GBL_EFI_OS_CONFIGURATION_PROTOCOL_GUID;
 
 static efi_status_t
 bootconfig_load_from_persistent_disk_device(char *fixup,
@@ -60,7 +60,7 @@ bootconfig_load_from_persistent_disk_device(char *fixup,
 }
 
 static efi_status_t EFIAPI fixup_bootconfig(
-	struct efi_gbl_os_configuration_protocol *self, size_t bootconfig_size,
+	struct gbl_efi_os_configuration_protocol *self, size_t bootconfig_size,
 	const char *bootconfig, size_t *fixup_buffer_size, char *fixup)
 {
 	EFI_ENTRY("%p, %zu, %p, %p, %p", self, bootconfig_size, bootconfig,
@@ -80,8 +80,8 @@ static efi_status_t EFIAPI fixup_bootconfig(
 }
 
 static efi_status_t EFIAPI select_device_trees(
-	struct efi_gbl_os_configuration_protocol *self, size_t num_device_trees,
-	struct efi_gbl_verified_device_tree *device_trees)
+	struct gbl_efi_os_configuration_protocol *self, size_t num_device_trees,
+	struct gbl_efi_verified_device_tree *device_trees)
 {
 	EFI_ENTRY("%p, %zu, %p", self, num_device_trees, device_trees);
 
@@ -102,7 +102,7 @@ static efi_status_t EFIAPI select_device_trees(
 }
 
 static efi_status_t EFIAPI select_fit_configuration(
-	struct efi_gbl_os_configuration_protocol *self, size_t fit_size,
+	struct gbl_efi_os_configuration_protocol *self, size_t fit_size,
 	const u8 *fit, size_t metadata_size, const u8 *metadata,
 	size_t *selected_configuration_offset)
 {
@@ -111,19 +111,19 @@ static efi_status_t EFIAPI select_fit_configuration(
 	return EFI_EXIT(EFI_UNSUPPORTED);
 }
 
-static struct efi_gbl_os_configuration_protocol efi_gbl_os_config_proto = {
-	.revision = EFI_GBL_OS_CONFIGURATION_PROTOCOL_REVISION,
+static struct gbl_efi_os_configuration_protocol gbl_efi_os_config_proto = {
+	.revision = GBL_EFI_OS_CONFIGURATION_PROTOCOL_REVISION,
 	.fixup_bootconfig = fixup_bootconfig,
 	.select_device_trees = select_device_trees,
 	.select_fit_configuration = select_fit_configuration,
 };
 
-efi_status_t efi_gbl_os_config_register(void)
+efi_status_t gbl_efi_os_config_register(void)
 {
-	efi_status_t ret = efi_add_protocol(efi_root, &efi_gbl_os_config_guid,
-					    &efi_gbl_os_config_proto);
+	efi_status_t ret = efi_add_protocol(efi_root, &gbl_efi_os_config_guid,
+					    &gbl_efi_os_config_proto);
 	if (ret != EFI_SUCCESS)
-		log_err("Failed to install EFI_GBL_OS_CONFIGURATION_PROTOCOL: 0x%lx\n",
+		log_err("Failed to install GBL_EFI_OS_CONFIGURATION_PROTOCOL: 0x%lx\n",
 			ret);
 
 	return ret;

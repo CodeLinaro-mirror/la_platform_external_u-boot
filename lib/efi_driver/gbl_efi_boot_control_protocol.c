@@ -27,7 +27,7 @@ static struct disk_partition ab_partition;
 static struct blk_desc *block_device;
 
 const efi_guid_t gbl_efi_boot_control_guid = GBL_EFI_BOOT_CONTROL_PROTOCOL_GUID;
-static struct gbl_efi_boot_control_protocol efi_gbl_slot_proto;
+static struct gbl_efi_boot_control_protocol gbl_efi_slot_proto;
 
 static u8 *buffer;
 
@@ -154,7 +154,7 @@ static efi_status_t EFIAPI
 get_slot_count(struct gbl_efi_boot_control_protocol *self, uint8_t *slot_count)
 {
 	EFI_ENTRY("%p, %p", self, slot_count);
-	if (self != &efi_gbl_slot_proto || !slot_count) {
+	if (self != &gbl_efi_slot_proto || !slot_count) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
@@ -173,10 +173,10 @@ get_slot_count(struct gbl_efi_boot_control_protocol *self, uint8_t *slot_count)
 
 static efi_status_t EFIAPI
 get_slot_info(struct gbl_efi_boot_control_protocol *self, u8 idx,
-	      struct efi_gbl_slot_info *info)
+	      struct gbl_efi_slot_info *info)
 {
 	EFI_ENTRY("%p, %uc, %p", self, idx, info);
-	if (self != &efi_gbl_slot_proto || !info) {
+	if (self != &gbl_efi_slot_proto || !info) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
@@ -211,7 +211,7 @@ get_slot_info(struct gbl_efi_boot_control_protocol *self, u8 idx,
 static efi_status_t
 get_current_slot_idx(struct gbl_efi_boot_control_protocol *self, u8 *idx)
 {
-	if (self != &efi_gbl_slot_proto || !idx) {
+	if (self != &gbl_efi_slot_proto || !idx) {
 		return EFI_INVALID_PARAMETER;
 	}
 
@@ -247,10 +247,10 @@ get_current_slot_idx(struct gbl_efi_boot_control_protocol *self, u8 *idx)
 
 static efi_status_t EFIAPI
 get_current_slot(struct gbl_efi_boot_control_protocol *self,
-		 struct efi_gbl_slot_info *info)
+		 struct gbl_efi_slot_info *info)
 {
 	EFI_ENTRY("%p, %p", self, info);
-	if (!info) {
+	if (self != &gbl_efi_slot_proto || !info) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
@@ -299,7 +299,7 @@ static efi_status_t EFIAPI
 set_active_slot(struct gbl_efi_boot_control_protocol *self, u8 idx)
 {
 	EFI_ENTRY("%p, %uc", self, idx);
-	if (self != &efi_gbl_slot_proto) {
+	if (self != &gbl_efi_slot_proto) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
@@ -340,7 +340,7 @@ get_one_shot_boot_mode(struct gbl_efi_boot_control_protocol *self,
 		       enum gbl_efi_one_shot_boot_mode *mode)
 {
 	EFI_ENTRY("%p, %p", self, mode);
-	if (self != &efi_gbl_slot_proto || !mode) {
+	if (self != &gbl_efi_slot_proto || !mode) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
@@ -364,14 +364,14 @@ handle_loaded_os(struct gbl_efi_boot_control_protocol *self,
 		 const struct gbl_efi_loaded_os *os)
 {
 	EFI_ENTRY("%p, %p", self, os);
-	if (self != &efi_gbl_slot_proto || !os) {
+	if (self != &gbl_efi_slot_proto || !os) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
 	return EFI_EXIT(EFI_UNSUPPORTED);
 }
 
-static struct gbl_efi_boot_control_protocol efi_gbl_slot_proto = {
+static struct gbl_efi_boot_control_protocol gbl_efi_slot_proto = {
 	.revision = GBL_EFI_BOOT_CONTROL_REVISION,
 	.get_slot_count = get_slot_count,
 	.get_slot_info = get_slot_info,
@@ -384,7 +384,7 @@ static struct gbl_efi_boot_control_protocol efi_gbl_slot_proto = {
 efi_status_t gbl_efi_boot_control_register(void)
 {
 	efi_status_t ret = efi_add_protocol(
-		efi_root, &gbl_efi_boot_control_guid, &efi_gbl_slot_proto);
+		efi_root, &gbl_efi_boot_control_guid, &gbl_efi_slot_proto);
 	if (ret != EFI_SUCCESS) {
 		log_err("Failed to install GBL_EFI_BOOT_CONTROL_PROTOCOL: 0x%lx\n",
 			ret);

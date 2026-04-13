@@ -12,8 +12,8 @@
 #include <efi_dt_fixup_cf.h>
 #include <gbl_efi_boot_control_protocol.h>
 #include <gbl_efi_fastboot_protocol.h>
-#include <efi_gbl_fastboot_transport.h>
-#include <efi_gbl_os_configuration.h>
+#include <gbl_efi_fastboot_transport.h>
+#include <gbl_efi_os_configuration.h>
 #include <efi_loader.h>
 #include <efi_variable.h>
 #include <log.h>
@@ -354,24 +354,24 @@ efi_status_t efi_init_obj_list(void)
 		}
 	}
 
-	if (IS_ENABLED(CONFIG_EFI_GBL_FASTBOOT_PROTOCOL)) {
-		ret = efi_gbl_fastboot_register();
+	if (IS_ENABLED(CONFIG_GBL_EFI_FASTBOOT_PROTOCOL)) {
+		ret = gbl_efi_fastboot_register();
 		if (ret != EFI_SUCCESS) {
 			log_err("GBL Fastboot Protocol initialization error\n");
 			goto out;
 		}
 	}
 
-	if (IS_ENABLED(CONFIG_EFI_GBL_FASTBOOT_TRANSPORT_PROTOCOL)) {
-		ret = efi_gbl_fastboot_transport_register();
+	if (IS_ENABLED(CONFIG_GBL_EFI_FASTBOOT_TRANSPORT_PROTOCOL)) {
+		ret = gbl_efi_fastboot_transport_register();
 		if (ret != EFI_SUCCESS) {
 			log_err("GBL Fastboot Transport Protocol initialization error\n");
 			goto out;
 		}
 	}
 
-	if (IS_ENABLED(CONFIG_EFI_GBL_OS_CONFIGURATION_PROTOCOL)) {
-		ret = efi_gbl_os_config_register();
+	if (IS_ENABLED(CONFIG_GBL_EFI_OS_CONFIGURATION_PROTOCOL)) {
+		ret = gbl_efi_os_config_register();
 		if (ret != EFI_SUCCESS) {
 			log_err("GBL_OS_CONFIGURATION initialization error\n");
 			goto out;

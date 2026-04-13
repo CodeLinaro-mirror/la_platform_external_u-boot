@@ -23,7 +23,7 @@ enum gbl_efi_one_shot_boot_mode {
 	GBL_EFI_ONE_SHOT_BOOT_MODE_RECOVERY,
 };
 
-struct efi_gbl_slot_info {
+struct gbl_efi_slot_info {
 	/* One UTF-8 encoded single character */
 	u32 suffix;
 	/* Any value other than those explicitly enumerated in EFI_UNBOOTABLE_REASON
@@ -57,10 +57,10 @@ struct gbl_efi_boot_control_protocol {
 	efi_status_t(EFIAPI *get_slot_info)(
 		/* in */ struct gbl_efi_boot_control_protocol *self,
 		/* in */ u8 idx,
-		/* out */ struct efi_gbl_slot_info *info);
+		/* out */ struct gbl_efi_slot_info *info);
 	efi_status_t(EFIAPI *get_current_slot)(
 		/* in */ struct gbl_efi_boot_control_protocol *self,
-		/* out */ struct efi_gbl_slot_info *info);
+		/* out */ struct gbl_efi_slot_info *info);
 	/* Slot metadata manipulation methods */
 	efi_status_t(EFIAPI *set_active_slot)(
 		/* in */ struct gbl_efi_boot_control_protocol *self,

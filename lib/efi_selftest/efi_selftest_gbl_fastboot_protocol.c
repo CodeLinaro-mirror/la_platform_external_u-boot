@@ -67,7 +67,7 @@ static int setup(const efi_handle_t handle,
 {
 	boot_services = systable->boottime;
 	efi_status_t res = boot_services->locate_protocol(
-		&efi_gbl_fastboot_guid, NULL, (void **)&protocol);
+		&gbl_efi_fastboot_guid, NULL, (void **)&protocol);
 	if (res != EFI_SUCCESS) {
 		protocol = NULL;
 		efi_st_error("Failed to locate GBL Fastboot protocol\n");

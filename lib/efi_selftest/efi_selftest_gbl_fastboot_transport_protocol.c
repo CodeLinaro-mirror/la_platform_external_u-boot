@@ -4,12 +4,12 @@
 
 #include <efi.h>
 #include <efi_api.h>
-#include <efi_gbl_fastboot_transport.h>
-#include <efi_gbl_fastboot_transport_interactive_serial.h>
+#include <gbl_efi_fastboot_transport.h>
+#include <gbl_efi_fastboot_transport_interactive_serial.h>
 #include <efi_selftest.h>
 #include <string.h>
 
-static struct efi_gbl_fastboot_transport_protocol *protocol;
+static struct gbl_efi_fastboot_transport_protocol *protocol;
 
 static int test_interactive_serial(void)
 {
@@ -29,8 +29,8 @@ static int test_interactive_serial(void)
 
 	char buf[32];
 	size_t bufsize = sizeof(buf);
-	const efi_gbl_fastboot_rx_mode mode =
-		EFI_GBL_FASTBOOT_RX_MODE_SINGLE_PACKET;
+	const gbl_efi_fastboot_rx_mode mode =
+		GBL_EFI_FASTBOOT_RX_MODE_SINGLE_PACKET;
 	res = protocol->receive(protocol, &bufsize, NULL, mode);
 	if (res != EFI_INVALID_PARAMETER) {
 		efi_st_error(
@@ -75,7 +75,7 @@ static int setup(const efi_handle_t handle_in,
 	efi_uintn_t no_handles;
 
 	efi_status_t ret = EFI_CALL(efi_locate_handle_buffer(
-		BY_PROTOCOL, &efi_gbl_fastboot_transport_guid, NULL,
+		BY_PROTOCOL, &gbl_efi_fastboot_transport_guid, NULL,
 		&no_handles, (efi_handle_t **)&handles));
 	if (ret != EFI_SUCCESS)
 		return EFI_UNSUPPORTED;
@@ -85,12 +85,12 @@ static int setup(const efi_handle_t handle_in,
 		struct efi_handler *cur_handler;
 
 		ret = efi_search_protocol(*handle,
-					  &efi_gbl_fastboot_transport_guid,
+					  &gbl_efi_fastboot_transport_guid,
 					  &cur_handler);
 		if (ret != EFI_SUCCESS)
 			continue;
 
-		struct efi_gbl_fastboot_transport_protocol *proto =
+		struct gbl_efi_fastboot_transport_protocol *proto =
 			cur_handler->protocol_interface;
 
 		if (0 == strcmp(proto->description, "serial-interactive")) {

@@ -8,7 +8,7 @@
 #include <efi_loader.h>
 #include <log.h>
 
-const efi_guid_t efi_gbl_fastboot_guid = EFI_GBL_FASTBOOT_PROTOCOL_GUID;
+const efi_guid_t gbl_efi_fastboot_guid = GBL_EFI_FASTBOOT_PROTOCOL_GUID;
 static struct gbl_efi_fastboot_protocol gbl_efi_fastboot_proto;
 
 // Deliberately simplified fastboot variable representation.
@@ -146,9 +146,9 @@ static struct gbl_efi_fastboot_protocol gbl_efi_fastboot_proto = {
 	.get_partition_type = get_partition_type,
 };
 
-efi_status_t efi_gbl_fastboot_register(void)
+efi_status_t gbl_efi_fastboot_register(void)
 {
-	efi_status_t ret = efi_add_protocol(efi_root, &efi_gbl_fastboot_guid,
+	efi_status_t ret = efi_add_protocol(efi_root, &gbl_efi_fastboot_guid,
 					    &gbl_efi_fastboot_proto);
 	if (ret != EFI_SUCCESS) {
 		log_err("Failed to install GBL_EFI_FASTBOOT_PROTOCOL: 0x%lx\n",

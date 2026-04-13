@@ -47,7 +47,7 @@ static int execute(void)
 		return EFI_ST_FAILURE;
 	}
 
-	struct efi_gbl_slot_info slot;
+	struct gbl_efi_slot_info slot;
 	res = protocol->get_current_slot(protocol, &slot);
 	if (res != EFI_SUCCESS) {
 		efi_st_error("Failed to get current slot: %lu\n", res);
