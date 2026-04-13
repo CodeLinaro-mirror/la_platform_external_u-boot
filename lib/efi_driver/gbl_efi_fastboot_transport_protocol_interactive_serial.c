@@ -146,18 +146,19 @@ static efi_status_t EFIAPI send(struct gbl_efi_fastboot_transport_protocol *this
 	}
 
 	if (*bufsize < 4) {
-		log_err("Bad fastboot command length: %i\n", *bufsize);
+		log_err("Bad fastboot command length: %zu\n", *bufsize);
 		return EFI_EXIT_NO_LOG(EFI_SUCCESS);
 	}
 
 	if (0 == strncmp(buf, "INFO", 4)) {
-		printf("%.*s\n", *bufsize - 4, &buf[4]);
+		printf("%.*s\n", (int)*bufsize - 4, &((const char *)buf)[4]);
 	} else if (0 == strncmp(buf, "FAIL", 4)) {
-		printf("Fail: %.*s\n", *bufsize - 4, &buf[4]);
+		printf("Fail: %.*s\n", (int)*bufsize - 4,
+		       &((const char *)buf)[4]);
 	} else if (0 == strncmp(buf, "OKAY", 4)) {
 		// nop
 	} else {
-		log_err("Bad fastboot command: %.*s\n", 4, buf);
+		log_err("Bad fastboot command: %.*s\n", 4, (const char *)buf);
 		return EFI_EXIT_NO_LOG(EFI_SUCCESS);
 	}
 

@@ -65,7 +65,7 @@ struct gbl_efi_fastboot_protocol {
 		/* in */ struct gbl_efi_fastboot_protocol *self,
 		/* in out */ size_t *bufsize,
 		/* out */ size_t *buffer_remains,
-		/* out */ uint8_t *buffer);
+		/* out */ u8 *buffer);
 
 	efi_status_t(EFIAPI *command_exec)(
 		/* in */ struct gbl_efi_fastboot_protocol *self,
@@ -73,7 +73,7 @@ struct gbl_efi_fastboot_protocol {
 		/* in */ const char *const *args,
 		/* in */ size_t download_buffer_size,
 		/* in */ size_t download_buffer_used_size,
-		/* in */ uint8_t *download_buffer,
+		/* in */ u8 *download_buffer,
 		/* out */ gbl_efi_fastboot_command_exec_result *implementation,
 		/* in */ fastboot_message_sender sender,
 		/* in */ void *context);

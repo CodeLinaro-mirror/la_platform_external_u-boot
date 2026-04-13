@@ -108,6 +108,11 @@ static efi_status_t EFIAPI select_fit_configuration(
 {
 	EFI_ENTRY("%p, %zu, %p, %zu, %p, %p", self, fit_size, fit,
 		  metadata_size, metadata, selected_configuration_offset);
+
+	if (!self || !fit || !selected_configuration_offset ||
+	    (metadata_size > 0 && !metadata))
+		return EFI_EXIT(EFI_INVALID_PARAMETER);
+
 	return EFI_EXIT(EFI_UNSUPPORTED);
 }
 

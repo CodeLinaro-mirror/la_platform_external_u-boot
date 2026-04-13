@@ -121,7 +121,7 @@ static efi_status_t EFIAPI send(struct gbl_efi_fastboot_transport_protocol *this
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	printf("dummy send: '%.*s'\n", (int)*bufsize, (char *)buf);
+	printf("dummy send: '%.*s'\n", (int)*bufsize, (const char *)buf);
 
 	return EFI_EXIT_NO_LOG(EFI_SUCCESS);
 }

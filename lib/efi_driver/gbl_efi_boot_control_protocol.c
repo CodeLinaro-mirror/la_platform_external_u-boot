@@ -151,7 +151,7 @@ static efi_status_t load_boot_data(void)
 }
 
 static efi_status_t EFIAPI
-get_slot_count(struct gbl_efi_boot_control_protocol *self, uint8_t *slot_count)
+get_slot_count(struct gbl_efi_boot_control_protocol *self, u8 *slot_count)
 {
 	EFI_ENTRY("%p, %p", self, slot_count);
 	if (self != &gbl_efi_slot_proto || !slot_count) {
