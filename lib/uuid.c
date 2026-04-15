@@ -136,6 +136,10 @@ static const struct {
 		EFI_RNG_PROTOCOL_GUID,
 	},
 	{
+		"EFI Timestamp",
+		EFI_TIMESTAMP_PROTOCOL_GUID,
+	},
+	{
 		"Simple Network",
 		EFI_SIMPLE_NETWORK_PROTOCOL_GUID,
 	},

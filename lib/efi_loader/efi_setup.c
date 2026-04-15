@@ -324,6 +324,13 @@ efi_status_t efi_init_obj_list(void)
 			goto out;
 	}
 
+	/* Install EFI_TIMESTAMP_PROTOCOL */
+	if (IS_ENABLED(CONFIG_EFI_TIMESTAMP_PROTOCOL)) {
+		ret = efi_timestamp_register();
+		if (ret != EFI_SUCCESS)
+			goto out;
+	}
+
 	if (IS_ENABLED(CONFIG_EFI_RISCV_BOOT_PROTOCOL)) {
 		ret = efi_riscv_register();
 		if (ret != EFI_SUCCESS)
