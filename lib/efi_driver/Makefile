@@ -17,3 +17,4 @@ obj-$(CONFIG_GBL_EFI_FASTBOOT_TRANSPORT_PROTOCOL_DUMMY) += gbl_efi_fastboot_tran
 obj-$(CONFIG_GBL_EFI_FASTBOOT_TRANSPORT_PROTOCOL_SERIAL) += gbl_efi_fastboot_transport_protocol_interactive_serial.o
 obj-$(CONFIG_GBL_EFI_OS_CONFIGURATION_PROTOCOL) += gbl_efi_os_configuration_protocol.o
 obj-$(CONFIG_EFI_DT_FIXUP_CF) += efi_dt_fixup_cf.o
+obj-$(CONFIG_SYSRESET_SBI) += efi_reset_riscv.o

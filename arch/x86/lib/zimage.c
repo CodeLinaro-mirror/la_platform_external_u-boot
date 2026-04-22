@@ -59,41 +59,8 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define COMMAND_LINE_SIZE	2048
 
-/**
- * struct zboot_state - Current state of the boot
- *
- * @bzimage_addr: Address of the bzImage to boot
- * @bzimage_size: Size of the bzImage, or 0 to detect this
- * @initrd_addr: Address of the initial ramdisk, or 0 if none
- * @initrd_size: Size of the initial ramdisk, or 0 if none
- * @load_address: Address where the bzImage is moved before booting, either
- *	BZIMAGE_LOAD_ADDR or ZIMAGE_LOAD_ADDR
- * @base_ptr: Pointer to the boot parameters, typically at address
- *	DEFAULT_SETUP_BASE
- * @cmdline: Environment variable containing the 'override' command line, or
- *	NULL to use the one in the setup block
- */
-struct zboot_state {
-	ulong bzimage_addr;
-	ulong bzimage_size;
-	ulong initrd_addr;
-	ulong initrd_size;
-	ulong load_address;
-	struct boot_params *base_ptr;
-	char *cmdline;
-} state;
-
-enum {
-	ZBOOT_STATE_START	= BIT(0),
-	ZBOOT_STATE_LOAD	= BIT(1),
-	ZBOOT_STATE_SETUP	= BIT(2),
-	ZBOOT_STATE_INFO	= BIT(3),
-	ZBOOT_STATE_GO		= BIT(4),
-
-	/* This one doesn't execute automatically, so stop the count before 5 */
-	ZBOOT_STATE_DUMP	= BIT(5),
-	ZBOOT_STATE_COUNT	= 5,
-};
+/* Current state of the boot */
+struct zboot_state state;
 
 static void build_command_line(char *command_line, int auto_boot)
 {
@@ -396,56 +363,10 @@ int setup_zimage(struct boot_params *setup_base, char *cmd_line, int auto_boot,
 	return 0;
 }
 
-static int do_zboot_start(struct cmd_tbl *cmdtp, int flag, int argc,
-			  char *const argv[])
-{
-	const char *s;
-
-	memset(&state, '\0', sizeof(state));
-	if (argc >= 2) {
-		/* argv[1] holds the address of the bzImage */
-		s = argv[1];
-	} else {
-		s = env_get("fileaddr");
-	}
-
-	if (s)
-		state.bzimage_addr = hextoul(s, NULL);
-
-	if (argc >= 3) {
-		/* argv[2] holds the size of the bzImage */
-		state.bzimage_size = hextoul(argv[2], NULL);
-	}
-
-	if (argc >= 4)
-		state.initrd_addr = hextoul(argv[3], NULL);
-	if (argc >= 5)
-		state.initrd_size = hextoul(argv[4], NULL);
-	if (argc >= 6 && *argv[5] != '-') {
-		/*
-		 * When the base_ptr is passed in, we assume that the image is
-		 * already loaded at the address given by argv[1] and therefore
-		 * the original bzImage is somewhere else, or not accessible.
-		 * In any case, we don't need access to the bzImage since all
-		 * the processing is assumed to be done.
-		 *
-		 * So set the base_ptr to the given address, use this arg as the
-		 * load address and set bzimage_addr to 0 so we know that it
-		 * cannot be proceesed (or processed again).
-		 */
-		state.base_ptr = (void *)hextoul(argv[5], NULL);
-		state.load_address = state.bzimage_addr;
-		state.bzimage_addr = 0;
-	}
-	if (argc >= 7)
-		state.cmdline = env_get(argv[6]);
-
-	return 0;
-}
-
-static int zboot_load(void)
+int zboot_load(void)
 {
 	struct boot_params *base_ptr;
+	int ret;
 
 	if (state.base_ptr) {
 		struct boot_params *from = (struct boot_params *)state.base_ptr;
@@ -465,23 +386,16 @@ static int zboot_load(void)
 	}
 	state.base_ptr = base_ptr;
 
-	return 0;
-}
-
-static int do_zboot_load(struct cmd_tbl *cmdtp, int flag, int argc,
-			 char *const argv[])
-{
-	if (zboot_load())
-		return CMD_RET_FAILURE;
-
-	if (env_set_hex("zbootbase", map_to_sysmem(state.base_ptr)) ||
-	    env_set_hex("zbootaddr", state.load_address))
-		return CMD_RET_FAILURE;
+	ret = env_set_hex("zbootbase", map_to_sysmem(state.base_ptr));
+	if (!ret)
+		ret = env_set_hex("zbootaddr", state.load_address);
+	if (ret)
+		return ret;
 
 	return 0;
 }
 
-static int zboot_setup(void)
+int zboot_setup(void)
 {
 	struct boot_params *base_ptr = state.base_ptr;
 	int ret;
@@ -495,33 +409,7 @@ static int zboot_setup(void)
 	return 0;
 }
 
-static int do_zboot_setup(struct cmd_tbl *cmdtp, int flag, int argc,
-			  char *const argv[])
-{
-	struct boot_params *base_ptr = state.base_ptr;
-
-	if (!base_ptr) {
-		printf("base is not set: use 'zboot load' first\n");
-		return CMD_RET_FAILURE;
-	}
-	if (zboot_setup()) {
-		puts("Setting up boot parameters failed ...\n");
-		return CMD_RET_FAILURE;
-	}
-
-	return 0;
-}
-
-static int do_zboot_info(struct cmd_tbl *cmdtp, int flag, int argc,
-			 char *const argv[])
-{
-	printf("Kernel loaded at %08lx, setup_base=%p\n",
-	       state.load_address, state.base_ptr);
-
-	return 0;
-}
-
-static int zboot_go(void)
+int zboot_go(void)
 {
 	struct boot_params *params = state.base_ptr;
 	struct setup_header *hdr = &params->hdr;
@@ -545,35 +433,12 @@ static int zboot_go(void)
 	return ret;
 }
 
-static int do_zboot_go(struct cmd_tbl *cmdtp, int flag, int argc,
-		       char *const argv[])
+int zboot_run(ulong addr, ulong size, ulong initrd, ulong initrd_size,
+	      ulong base, char *cmdline)
 {
 	int ret;
 
-	ret = zboot_go();
-	printf("Kernel returned! (err=%d)\n", ret);
-
-	return CMD_RET_FAILURE;
-}
-
-int zboot_start(ulong addr, ulong size, ulong initrd, ulong initrd_size,
-		ulong base, char *cmdline)
-{
-	int ret;
-
-	memset(&state, '\0', sizeof(state));
-
-	if (base) {
-		state.base_ptr = map_sysmem(base, 0);
-		state.load_address = addr;
-	} else {
-		state.bzimage_addr = addr;
-	}
-	state.bzimage_size = size;
-	state.initrd_addr = initrd;
-	state.initrd_size = initrd_size;
-	state.cmdline = cmdline;
-
+	zboot_start(addr, size, initrd, initrd_size, base, cmdline);
 	ret = zboot_load();
 	if (ret)
 		return log_msg_ret("ld", ret);
@@ -582,7 +447,7 @@ int zboot_start(ulong addr, ulong size, ulong initrd, ulong initrd_size,
 		return log_msg_ret("set", ret);
 	ret = zboot_go();
 	if (ret)
-		return log_msg_ret("set", ret);
+		return log_msg_ret("go", ret);
 
 	return -EFAULT;
 }
@@ -772,77 +637,32 @@ void zimage_dump(struct boot_params *base_ptr, bool show_cmdline)
 		print_num("Kernel info offset", hdr->kernel_info_offset);
 }
 
-static int do_zboot_dump(struct cmd_tbl *cmdtp, int flag, int argc,
-			 char *const argv[])
+void zboot_start(ulong bzimage_addr, ulong bzimage_size, ulong initrd_addr,
+		 ulong initrd_size, ulong base_addr, const char *cmdline)
 {
-	struct boot_params *base_ptr = state.base_ptr;
+	memset(&state, '\0', sizeof(state));
 
-	if (argc > 1)
-		base_ptr = (void *)hextoul(argv[1], NULL);
-	if (!base_ptr) {
-		printf("No zboot setup_base\n");
-		return CMD_RET_FAILURE;
+	state.bzimage_size = bzimage_size;
+	state.initrd_addr = initrd_addr;
+	state.initrd_size = initrd_size;
+	if (base_addr) {
+		state.base_ptr = map_sysmem(base_addr, 0);
+		state.load_address = bzimage_addr;
+	} else {
+		state.bzimage_addr = bzimage_addr;
 	}
-	zimage_dump(base_ptr, true);
-
-	return 0;
+	state.cmdline = cmdline;
 }
 
-/* Note: This defines the complete_zboot() function */
-U_BOOT_SUBCMDS(zboot,
-	U_BOOT_CMD_MKENT(start, 8, 1, do_zboot_start, "", ""),
-	U_BOOT_CMD_MKENT(load, 1, 1, do_zboot_load, "", ""),
-	U_BOOT_CMD_MKENT(setup, 1, 1, do_zboot_setup, "", ""),
-	U_BOOT_CMD_MKENT(info, 1, 1, do_zboot_info, "", ""),
-	U_BOOT_CMD_MKENT(go, 1, 1, do_zboot_go, "", ""),
-	U_BOOT_CMD_MKENT(dump, 2, 1, do_zboot_dump, "", ""),
-)
-
-int do_zboot_states(struct cmd_tbl *cmdtp, int flag, int argc,
-		    char *const argv[], int state_mask)
+void zboot_info(void)
 {
-	int i;
-
-	for (i = 0; i < ZBOOT_STATE_COUNT; i++) {
-		struct cmd_tbl *cmd = &zboot_subcmds[i];
-		int mask = 1 << i;
-		int ret;
-
-		if (mask & state_mask) {
-			ret = cmd->cmd(cmd, flag, argc, argv);
-			if (ret)
-				return ret;
-		}
-	}
-
-	return 0;
-}
-
-int do_zboot_parent(struct cmd_tbl *cmdtp, int flag, int argc,
-		    char *const argv[], int *repeatable)
-{
-	/* determine if we have a sub command */
-	if (argc > 1) {
-		char *endp;
-
-		hextoul(argv[1], &endp);
-		/*
-		 * endp pointing to nul means that argv[1] was just a valid
-		 * number, so pass it along to the normal processing
-		 */
-		if (*endp)
-			return do_zboot(cmdtp, flag, argc, argv, repeatable);
-	}
-
-	do_zboot_states(cmdtp, flag, argc, argv, ZBOOT_STATE_START |
-			ZBOOT_STATE_LOAD | ZBOOT_STATE_SETUP |
-			ZBOOT_STATE_INFO | ZBOOT_STATE_GO);
-
-	return CMD_RET_FAILURE;
+	printf("Kernel loaded at %08lx, setup_base=%p\n",
+	       state.load_address, state.base_ptr);
 }
 
 #ifdef CONFIG_ANDROID_BOOT_IMAGE
-static char hex_to_char(uint8_t nibble) {
+static char hex_to_char(uint8_t nibble)
+{
 	if (nibble < 10) {
 		return '0' + nibble;
 	} else {
@@ -850,14 +670,17 @@ static char hex_to_char(uint8_t nibble) {
 	}
 }
 // Helper function to convert 32bit int to a hex string
-static void hex_to_str(char* str, ulong input) {
-	str[0] = '0'; str[1] = 'x';
+static void hex_to_str(char *str, ulong input)
+{
+	str[0] = '0';
+	str[1] = 'x';
 	size_t str_idx = 2;
 	uint32_t byte_extracted;
 	uint8_t nibble;
-        // Assume that this is on a little endian system.
-	for(int byte_idx = 3; byte_idx >= 0; byte_idx--) {
-		byte_extracted = ((0xFF << (byte_idx*8)) & input) >> (byte_idx*8);
+	// Assume that this is on a little endian system.
+	for (int byte_idx = 3; byte_idx >= 0; byte_idx--) {
+		byte_extracted = ((0xFF << (byte_idx * 8)) & input) >>
+				 (byte_idx * 8);
 		nibble = byte_extracted & 0xF0;
 		nibble = nibble >> 4;
 		nibble = nibble & 0xF;
@@ -874,52 +697,29 @@ int android_bootloader_boot_kernel(const struct andr_boot_info *boot_info)
 	ulong kernel_address;
 	ulong ramdisk_address, ramdisk_len;
 	char kernel_addr_str[12], ramdisk_addr_str[12], ramdisk_len_str[12];
-	char *zboot_args[] = {
-		"zboot", kernel_addr_str, "0", ramdisk_addr_str,
-			 ramdisk_len_str, "-", "bootargs" };
+	char *zboot_args[] = { "zboot",		 kernel_addr_str, "0",
+			       ramdisk_addr_str, ramdisk_len_str, "-",
+			       "bootargs" };
 	int repeatable = 0;
 
 	if (android_image_get_kernel(boot_info, images.verify, NULL, NULL))
 		return -1;
-	if (android_image_get_ramdisk(boot_info, &ramdisk_address, &ramdisk_len))
+	if (android_image_get_ramdisk(boot_info, &ramdisk_address,
+				      &ramdisk_len))
 		return -1;
 
 	kernel_address = android_image_get_kload(boot_info);
 	hex_to_str(kernel_addr_str, kernel_address);
 	hex_to_str(ramdisk_addr_str, ramdisk_address);
-	hex_to_str(ramdisk_len_str , ramdisk_len);
+	hex_to_str(ramdisk_len_str, ramdisk_len);
 
 	printf("Booting kernel at %s with fdt at %s ramdisk %s (%s bytes)...\n\n\n",
-		kernel_addr_str, env_get("fdtaddr"), ramdisk_addr_str, ramdisk_len_str);
+	       kernel_addr_str, env_get("fdtaddr"), ramdisk_addr_str,
+	       ramdisk_len_str);
 
-	do_zboot_parent(NULL, 0, 7, zboot_args, &repeatable);
+	zboot_run(kernel_address, 0, ramdisk_address, ramdisk_len, 0,
+		  env_get("bootargs"));
 
 	return -1;
 }
 #endif
-
-U_BOOT_CMDREP_COMPLETE(
-	zboot, 8, do_zboot_parent, "Boot bzImage",
-	"[addr] [size] [initrd addr] [initrd size] [setup] [cmdline]\n"
-	"      addr -        The optional starting address of the bzimage.\n"
-	"                    If not set it defaults to the environment\n"
-	"                    variable \"fileaddr\".\n"
-	"      size -        The optional size of the bzimage. Defaults to\n"
-	"                    zero.\n"
-	"      initrd addr - The address of the initrd image to use, if any.\n"
-	"      initrd size - The size of the initrd image to use, if any.\n"
-	"      setup -       The address of the kernel setup region, if this\n"
-	"                    is not at addr\n"
-	"      cmdline -     Environment variable containing the kernel\n"
-	"                    command line, to override U-Boot's normal\n"
-	"                    cmdline generation\n"
-	"\n"
-	"Sub-commands to do part of the zboot sequence:\n"
-	"\tstart [addr [arg ...]] - specify arguments\n"
-	"\tload   - load OS image\n"
-	"\tsetup  - set up table\n"
-	"\tinfo   - show summary info\n"
-	"\tgo     - start OS\n"
-	"\tdump [addr]    - dump info (optional address of boot params)",
-	complete_zboot
-);

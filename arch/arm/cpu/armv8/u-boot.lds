@@ -25,9 +25,9 @@ SECTIONS
 #endif
 
 	. = ALIGN(8);
+	__image_copy_start = ADDR(.text);
 	.text :
 	{
-		*(.__image_copy_start)
 		CPUDIR/start.o (.text*)
 	}
 
@@ -119,8 +119,6 @@ SECTIONS
 		KEEP(*(SORT(__u_boot_list*)));
 	}
 
-	. = ALIGN(8);
-
 	.efi_runtime_rel : {
                 __efi_runtime_rel_start = .;
 		*(.rel*.efi_runtime)
@@ -129,43 +127,24 @@ SECTIONS
 	}
 
 	. = ALIGN(8);
-
-	.image_copy_end :
-	{
-		*(.__image_copy_end)
-	}
-
-	. = ALIGN(8);
-
-	.rel_dyn_start :
-	{
-		*(.__rel_dyn_start)
-	}
+	__image_copy_end = .;
 
 	.rela.dyn : {
+		__rel_dyn_start = .;
 		*(.rela*)
-	}
-
-	.rel_dyn_end :
-	{
-		*(.__rel_dyn_end)
+		__rel_dyn_end = .;
 	}
 
 	_end = .;
 
-	. = ALIGN(8);
-
-	.bss_start : {
-		KEEP(*(.__bss_start));
-	}
-
-	.bss : {
+	/*
+	 * arch/arm/lib/crt0_64.S assumes __bss_start - __bss_end % 8 == 0
+	 */
+	.bss ALIGN(8) : {
+		__bss_start = .;
 		*(.bss*)
-		 . = ALIGN(8);
-	}
-
-	.bss_end : {
-		KEEP(*(.__bss_end));
+		. = ALIGN(8);
+		__bss_end = .;
 	}
 
 	/DISCARD/ : { *(.dynsym) }
