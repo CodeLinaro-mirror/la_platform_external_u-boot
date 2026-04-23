@@ -3,7 +3,9 @@ CONFIG_ENV_SIZE=0x1000
 # Allow U-boot to use 16 mb of heap. Main consumers are virtio devices and
 # Android boot flow.
 CONFIG_SYS_MALLOC_LEN=0x1600000
-
+CONFIG_TOOLS_LIBCRYPTO=n
+CONFIG_TOOLS_KWBIMAGE=n
+CONFIG_TOOLS_MKEFICAPSULE=n
 # Enable Android-specific features and commands needed to boot
 CONFIG_ANDROID_AB=y
 CONFIG_ANDROID_BOOT_IMAGE=y

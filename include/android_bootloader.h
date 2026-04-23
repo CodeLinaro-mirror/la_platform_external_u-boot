@@ -7,7 +7,7 @@
 #ifndef __ANDROID_BOOTLOADER_H
 #define __ANDROID_BOOTLOADER_H
 
-#include <common.h>
+#include <linux/types.h>
 
 enum android_boot_mode {
 	ANDROID_BOOT_MODE_NORMAL = 0,

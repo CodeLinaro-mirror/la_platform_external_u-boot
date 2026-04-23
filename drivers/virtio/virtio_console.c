@@ -10,7 +10,11 @@
  */
 
 #include <blk.h>
-#include <common.h>
+#include <linux/types.h>
+#include <linux/kernel.h>
+#include <linux/errno.h>
+#include <log.h>
+#include <stdio.h>
 #include <dm.h>
 #include <dm/device-internal.h>
 #include <dm/devres.h>

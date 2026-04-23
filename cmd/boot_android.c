@@ -4,7 +4,12 @@
  */
 
 #include <android_bootloader.h>
-#include <common.h>
+#include <linux/types.h>
+#include <vsprintf.h>
+#include <env.h>
+#include <stdio.h>
+#include <linux/string.h>
+#include <blk.h>
 #include <command.h>
 #include <part.h>
 

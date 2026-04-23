@@ -53,5 +53,4 @@
 	"fdt_addr_r=0x4000000\0"			\
 	"ramdiskfile=initramfs.gz\0"
 
-
 #endif	/* __CONFIG_H */

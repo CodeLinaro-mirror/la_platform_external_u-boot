@@ -5,7 +5,6 @@
 
 #include <android_bootloader_oemlock.h>
 #include <command.h>
-#include <common.h>
 #include <console.h>
 #include <env.h>
 #include <fastboot-internal.h>
@@ -15,6 +14,7 @@
 #include <fb_nand.h>
 #include <part.h>
 #include <stdlib.h>
+#include <vsprintf.h>
 #include <linux/printk.h>
 
 /**

@@ -100,6 +100,7 @@ enum {
 	IH_OS_TEE,			/* Trusted Execution Environment */
 	IH_OS_OPENSBI,			/* RISC-V OpenSBI */
 	IH_OS_EFI,			/* EFI Firmware (e.g. GRUB2) */
+	IH_OS_ELF,			/* ELF Image (e.g. seL4) */
 
 	IH_OS_COUNT,
 };
@@ -1893,6 +1894,13 @@ struct andr_boot_info* android_image_load(struct blk_desc *dev_desc,
 
 #endif /* CONFIG_ANDROID_BOOT_IMAGE */
 #endif /* !USE_HOSTCC */
+
+/**
+ * set_abootimg_addr() - Set Android vendor boot image address
+ *
+ * Return: no returned results
+ */
+void set_avendor_bootimg_addr(ulong addr);
 
 /**
  * board_fit_config_name_match() - Check for a matching board name

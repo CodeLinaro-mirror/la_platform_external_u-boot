@@ -29,13 +29,15 @@ static void print_help(void)
 static char context_inner_buffer[BUFFER_SIZE];
 typedef struct _Context {
 	struct membuff mb;
+	struct cyclic_info cyclic;
+	bool registered;
 } Context;
 static Context ctx;
 
-static struct cyclic_info *cyclic_info = NULL;
-static void poll_loop(void *ctx)
+static void poll_loop(struct cyclic_info *c)
 {
-	struct membuff *mb = &((Context *)ctx)->mb;
+	Context *my_ctx = container_of(c, Context, cyclic);
+	struct membuff *mb = &my_ctx->mb;
 	if (tstc()) {
 		membuff_putbyte(mb, getchar());
 	}
@@ -50,8 +52,9 @@ start(struct gbl_efi_fastboot_transport_protocol *this)
 	}
 
 	membuff_init(&ctx.mb, context_inner_buffer, BUFFER_SIZE);
-	cyclic_info = cyclic_register(poll_loop, 100 * 1000 /*100ms*/,
-				      DESCRIPTION, &ctx);
+	cyclic_register(&ctx.cyclic, poll_loop, 100 * 1000 /*100ms*/,
+			DESCRIPTION);
+	ctx.registered = true;
 	print_help();
 
 	return EFI_EXIT(EFI_SUCCESS);
@@ -63,12 +66,12 @@ static efi_status_t EFIAPI stop(struct gbl_efi_fastboot_transport_protocol *this
 	if (this != &gbl_efi_fastboot_transport_interactive_serial_proto) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
-	if (!cyclic_info) {
+	if (!ctx.registered) {
 		return EFI_EXIT(EFI_NOT_STARTED);
 	}
 
-	cyclic_unregister(cyclic_info);
-	cyclic_info = NULL;
+	cyclic_unregister(&ctx.cyclic);
+	ctx.registered = false;
 	membuff_uninit(&ctx.mb);
 
 	return EFI_EXIT(EFI_SUCCESS);

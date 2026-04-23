@@ -10,7 +10,8 @@
 #include <android_ab.h>
 #include <bcb.h>
 #include <cli.h>
-#include <common.h>
+#include <stdio.h>
+#include <linux/string.h>
 #include <dm/device.h>
 #include <dm/uclass.h>
 #include <image.h>

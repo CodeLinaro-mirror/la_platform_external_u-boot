@@ -3,7 +3,8 @@
  * Copyright (C) 2022 The Android Open Source Project
  */
 
-#include <common.h>
+#include <linux/types.h>
+#include <log.h>
 #include <net/tcp.h>
 #include <net/tcp6.h>
 #include <net6.h>
