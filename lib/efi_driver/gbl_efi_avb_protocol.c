@@ -7,6 +7,8 @@
 #include <gbl_efi_avb_protocol.h>
 #include <efi_loader.h>
 #include <log.h>
+#include <android_bootloader_oemlock.h>
+#include <avb_verify.h>
 
 const efi_guid_t gbl_efi_avb_guid = GBL_EFI_AVB_PROTOCOL_GUID;
 static struct gbl_efi_avb_protocol gbl_efi_avb_proto;
@@ -20,7 +22,9 @@ static efi_status_t EFIAPI read_partition_attributes(
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	return EFI_EXIT(EFI_UNSUPPORTED);
+	*num_partitions = 0;
+
+	return EFI_EXIT(EFI_SUCCESS);
 }
 
 static efi_status_t EFIAPI
@@ -32,8 +36,19 @@ read_device_status(struct gbl_efi_avb_protocol *this,
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	*status_flags = GBL_EFI_AVB_DEVICE_STATUS_UNLOCKABLE;
+	*status_flags = 0;
 
+	int locked = oemlock_is_locked();
+	if (locked == 0) {
+		*status_flags |= GBL_EFI_AVB_DEVICE_STATUS_UNLOCKED;
+	}
+
+	int allowed = oemlock_is_allowed();
+	if (allowed == 1) {
+		*status_flags |= GBL_EFI_AVB_DEVICE_STATUS_UNLOCKABLE;
+	}
+
+	// TODO: Support GBL_EFI_AVB_DEVICE_STATUS_DM_VERITY_FAILED when CF handles DM verity errors.
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
@@ -51,7 +66,12 @@ static efi_status_t EFIAPI validate_vbmeta_public_key(
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	*validation_status = GBL_EFI_AVB_KEY_VALIDATION_STATUS_VALID;
+	if (avb_pubkey_is_trusted(public_key_data, public_key_length) ==
+	    CMD_RET_SUCCESS) {
+		*validation_status = GBL_EFI_AVB_KEY_VALIDATION_STATUS_VALID;
+	} else {
+		*validation_status = GBL_EFI_AVB_KEY_VALIDATION_STATUS_INVALID;
+	}
 
 	return EFI_EXIT(EFI_SUCCESS);
 }
@@ -65,7 +85,9 @@ static efi_status_t EFIAPI read_rollback_index(struct gbl_efi_avb_protocol *this
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	return EFI_EXIT(EFI_UNSUPPORTED);
+	// TODO: Cuttlefish does not yet support rollback protection. This is a temporary implementation for CF to boot with GBL
+	*rollback_index = 0;
+	return EFI_EXIT(EFI_SUCCESS);
 }
 
 static efi_status_t EFIAPI
@@ -77,7 +99,8 @@ write_rollback_index(struct gbl_efi_avb_protocol *this, size_t index_location,
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	return EFI_EXIT(EFI_UNSUPPORTED);
+	// TODO: Cuttlefish does not yet support rollback protection. This is a mock implementation.
+	return EFI_EXIT(EFI_SUCCESS);
 }
 
 static efi_status_t EFIAPI
@@ -89,6 +112,7 @@ read_persistent_value(struct gbl_efi_avb_protocol *this, const char *name,
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
+	// TODO:implement once DM_VERITY support is needed
 	return EFI_EXIT(EFI_UNSUPPORTED);
 }
 
@@ -102,6 +126,7 @@ write_persistent_value(struct gbl_efi_avb_protocol *this, const char *name,
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
+	// TODO:implement once DM_VERITY support is needed
 	return EFI_EXIT(EFI_UNSUPPORTED);
 }
 
@@ -126,7 +151,36 @@ static efi_status_t EFIAPI write_lock_state(struct gbl_efi_avb_protocol *this,
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	return EFI_EXIT(EFI_UNSUPPORTED);
+	if (type == GBL_EFI_AVB_LOCK_TYPE_CRITICAL) {
+		return EFI_EXIT(EFI_UNSUPPORTED);
+	}
+
+	if (type != GBL_EFI_AVB_LOCK_TYPE_DEVICE) {
+		return EFI_EXIT(EFI_INVALID_PARAMETER);
+	}
+
+	if (state == GBL_EFI_AVB_LOCK_STATE_UNLOCKED) {
+		int allowed = oemlock_is_allowed();
+		if (allowed < 0) {
+			return EFI_EXIT(EFI_DEVICE_ERROR);
+		}
+		if (allowed == 0) {
+			return EFI_EXIT(EFI_ACCESS_DENIED);
+		}
+		int ret = oemlock_set_locked(false);
+		if (ret < 0) {
+			return EFI_EXIT(EFI_DEVICE_ERROR);
+		}
+	} else if (state == GBL_EFI_AVB_LOCK_STATE_LOCKED) {
+		int ret = oemlock_set_locked(true);
+		if (ret < 0) {
+			return EFI_EXIT(EFI_DEVICE_ERROR);
+		}
+	} else {
+		return EFI_EXIT(EFI_INVALID_PARAMETER);
+	}
+
+	return EFI_EXIT(EFI_SUCCESS);
 }
 
 static efi_status_t EFIAPI factory_data_reset(struct gbl_efi_avb_protocol *this)
@@ -136,7 +190,8 @@ static efi_status_t EFIAPI factory_data_reset(struct gbl_efi_avb_protocol *this)
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	return EFI_EXIT(EFI_UNSUPPORTED);
+	// TODO: Investigate whether any secure world data requires clearance during a Cuttlefish factory reset.
+	return EFI_EXIT(EFI_SUCCESS);
 }
 
 static struct gbl_efi_avb_protocol gbl_efi_avb_proto = {
