@@ -5,3 +5,5 @@ uenvcmd=bootmenu && run bootcmd_android
 fastbootcmd=fastboot tcp -ipv6 && boot
 netretry=yes
 android_keymint_needed=N
+efi_block_io_ignore_interface=virtio
+efi_block_io_ignore_devnum=1
