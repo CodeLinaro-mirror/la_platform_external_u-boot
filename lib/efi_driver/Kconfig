@@ -8,6 +8,14 @@ config GBL_EFI_BOOT_CONTROL_PROTOCOL
 	  marking boot attempts, changing the currently active slot,
 	  and querying metadata about boot slots.
 
+config GBL_EFI_AVB_PROTOCOL
+	bool "Include GBL Android Verified Boot protocol"
+	depends on EFI_LOADER
+	help
+	  Include the driver for the custom GBL Android Verified Boot protocol.
+	  This protocol is used for platform-specific AVB logic, including
+	  lock state management, rollback protection, and public key validation.
+
 config GBL_EFI_FASTBOOT_PROTOCOL
 	bool "Include GBL Fastboot customization protocol"
 	depends on EFI_LOADER

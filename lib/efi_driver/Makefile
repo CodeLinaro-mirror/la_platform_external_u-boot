@@ -11,6 +11,7 @@ obj-y += efi_block_device.o
 endif
 
 obj-$(CONFIG_GBL_EFI_BOOT_CONTROL_PROTOCOL) += gbl_efi_boot_control_protocol.o
+obj-$(CONFIG_GBL_EFI_AVB_PROTOCOL) += gbl_efi_avb_protocol.o
 obj-$(CONFIG_GBL_EFI_FASTBOOT_PROTOCOL) += gbl_efi_fastboot_protocol.o
 obj-$(CONFIG_GBL_EFI_FASTBOOT_TRANSPORT_PROTOCOL) += gbl_efi_fastboot_transport_protocol.o
 obj-$(CONFIG_GBL_EFI_FASTBOOT_TRANSPORT_PROTOCOL_DUMMY) += gbl_efi_fastboot_transport_protocol_dummy.o
