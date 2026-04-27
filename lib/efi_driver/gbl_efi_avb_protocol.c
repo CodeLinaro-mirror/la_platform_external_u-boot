@@ -48,7 +48,7 @@ read_device_status(struct gbl_efi_avb_protocol *this,
 		*status_flags |= GBL_EFI_AVB_DEVICE_STATUS_UNLOCKABLE;
 	}
 
-	// TODO: Support GBL_EFI_AVB_DEVICE_STATUS_DM_VERITY_FAILED when CF handles DM verity errors.
+	// TODO(b/507132906): Support GBL_EFI_AVB_DEVICE_STATUS_DM_VERITY_FAILED when CF handles DM verity errors.
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
@@ -85,7 +85,7 @@ static efi_status_t EFIAPI read_rollback_index(struct gbl_efi_avb_protocol *this
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	// TODO: Cuttlefish does not yet support rollback protection. This is a temporary implementation for CF to boot with GBL
+	// TODO(b/507133814): Cuttlefish does not yet support rollback protection. This is a temporary implementation for CF to boot with GBL
 	*rollback_index = 0;
 	return EFI_EXIT(EFI_SUCCESS);
 }
@@ -99,7 +99,7 @@ write_rollback_index(struct gbl_efi_avb_protocol *this, size_t index_location,
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	// TODO: Cuttlefish does not yet support rollback protection. This is a mock implementation.
+	// TODO(b/507133814): Cuttlefish does not yet support rollback protection. This is a mock implementation.
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
@@ -112,7 +112,7 @@ read_persistent_value(struct gbl_efi_avb_protocol *this, const char *name,
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	// TODO:implement once DM_VERITY support is needed
+	// TODO(b/507132906): implement once DM_VERITY support is needed
 	return EFI_EXIT(EFI_UNSUPPORTED);
 }
 
@@ -126,7 +126,7 @@ write_persistent_value(struct gbl_efi_avb_protocol *this, const char *name,
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	// TODO:implement once DM_VERITY support is needed
+	// TODO(b/507132906): implement once DM_VERITY support is needed
 	return EFI_EXIT(EFI_UNSUPPORTED);
 }
 
@@ -190,7 +190,7 @@ static efi_status_t EFIAPI factory_data_reset(struct gbl_efi_avb_protocol *this)
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	// TODO: Investigate whether any secure world data requires clearance during a Cuttlefish factory reset.
+	// TODO(b/507134176): Investigate whether any secure world data requires clearance during a Cuttlefish factory reset.
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
