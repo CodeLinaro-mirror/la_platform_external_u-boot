@@ -696,10 +696,6 @@ int android_bootloader_boot_kernel(const struct andr_boot_info *boot_info)
 	ulong kernel_address;
 	ulong ramdisk_address, ramdisk_len;
 	char kernel_addr_str[12], ramdisk_addr_str[12], ramdisk_len_str[12];
-	char *zboot_args[] = { "zboot",		 kernel_addr_str, "0",
-			       ramdisk_addr_str, ramdisk_len_str, "-",
-			       "bootargs" };
-	int repeatable = 0;
 
 	if (android_image_get_kernel(boot_info, images.verify, NULL, NULL))
 		return -1;
