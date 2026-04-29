@@ -131,7 +131,7 @@ static ulong virtio_blk_erase(struct udevice *dev, lbaint_t start,
 			      lbaint_t blkcnt)
 {
 	if (!virtio_has_feature(dev, VIRTIO_BLK_F_WRITE_ZEROES))
-		return -ENOTSUPP;
+		return -EOPNOTSUPP;
 
 	return virtio_blk_do_req(dev, start, blkcnt, NULL, VIRTIO_BLK_T_WRITE_ZEROES);
 }

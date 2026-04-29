@@ -150,8 +150,8 @@ static bool android_read_data(const char *name,
 	}
 	unsigned long blks_read  = blk_dread(block_dev, start, blk_cnt, dest);
 	if(blks_read != blk_cnt) {
-		debug("%s blk cnt is %ld and blks read is %ld\n",
-			name, blk_cnt, blks_read);
+		debug("%s blk cnt is %llu and blks read is %lu\n",
+			name, (unsigned long long)blk_cnt, blks_read);
 		goto err;
 	}
 	if (overwritten > 0) {
@@ -700,7 +700,7 @@ bool android_image_get_dtb_by_index(ulong hdr_addr, u32 index, ulong *addr,
 	return false;
 }
 
-#if !defined(CONFIG_SPL_BUILD)
+#if !defined(CONFIG_XPL_BUILD)
 /**
  * android_print_contents - prints out the contents of the Android format image
  * @hdr: pointer to the Android format image header
