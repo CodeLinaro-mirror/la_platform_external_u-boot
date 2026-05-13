@@ -92,8 +92,8 @@ else
 endif
 endif
 
-%_defconfig: $(obj)/conf
-	$(Q)$(CPP) -nostdinc -P -I $(srctree) -undef -x assembler-with-cpp $(srctree)/arch/$(SRCARCH)/configs/$@ -o generated_defconfig
+%_defconfig: $(obj)/conf arch/$(SRCARCH)/configs/%_defconfig
+	$(Q)$(CPP) -nostdinc -P -I $(srctree) -undef -x assembler-with-cpp $(filter %_defconfig,$^) -o generated_defconfig
 	$(Q)$< $(silent) --defconfig=generated_defconfig $(Kconfig)
 
 # Added for U-Boot (backward compatibility)
