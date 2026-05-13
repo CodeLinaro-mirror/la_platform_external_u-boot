@@ -12,6 +12,16 @@ kernel_build(
         "u-boot.bin",
     ],
     build_config = "build.config.crosvm.aarch64",
+    defconfig = "configs/qemu_arm64_defconfig",
+    srcarch = "..",
+    check_defconfig = "disabled",
+    pre_defconfig_fragments = [
+        "qemu-minimal.fragment",
+        "arm.fragment",
+        "cuttlefish.fragment",
+        "crosvm.fragment",
+        "crosvm-aarch64.fragment",
+    ],
     deps = [
         "//prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9:binaries",
     ],
