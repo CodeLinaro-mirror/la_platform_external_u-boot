@@ -208,6 +208,14 @@ kernel_build(
         "u-boot.bin",
     ],
     build_config = "build.config.qemu.aarch64",
+    check_defconfig = "disabled",
+    defconfig = "configs/qemu_arm64_defconfig",
+    pre_defconfig_fragments = [
+        "qemu-minimal.fragment",
+        "arm.fragment",
+        "cuttlefish.fragment",
+    ],
+    srcarch = "..",
     deps = [
         "//prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9:binaries",
     ],
