@@ -54,6 +54,17 @@ kernel_build(
     ],
     arch = "x86_64",
     build_config = "build.config.kiwi",
+    check_defconfig = "disabled",
+    defconfig = "configs/qemu-x86_defconfig",
+    pre_defconfig_fragments = [
+        "qemu-minimal.fragment",
+        "x86.fragment",
+        "cuttlefish.fragment",
+        "crosvm.fragment",
+        "crosvm-x86_64.fragment",
+        "kiwi.fragment",
+    ],
+    srcarch = "..",
     deps = [
         "//prebuilts/gcc/linux-x86/x86/x86_64-linux-android-4.9:binaries",
     ],
