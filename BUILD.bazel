@@ -167,6 +167,16 @@ kernel_build(
         "u-boot.elf",
     ],
     build_config = "build.config.gem5.aarch64",
+    check_defconfig = "disabled",
+    defconfig = "configs/qemu_arm64_defconfig",
+    pre_defconfig_fragments = [
+        "qemu-minimal.fragment",
+        "gem5-aarch64.fragment",
+        "arm.fragment",
+        "cuttlefish.fragment",
+        "avb_unlocked.fragment",
+    ],
+    srcarch = "..",
     deps = [
         "//prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9:binaries",
     ],
