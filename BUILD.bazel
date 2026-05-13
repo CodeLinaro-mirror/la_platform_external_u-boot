@@ -248,6 +248,15 @@ kernel_build(
     ],
     arch = "riscv64",
     build_config = "build.config.qemu.riscv64",
+    check_defconfig = "disabled",
+    defconfig = "configs/qemu-riscv64_smode_defconfig",
+    pre_defconfig_fragments = [
+        "qemu-minimal.fragment",
+        "riscv64.fragment",
+        "cuttlefish.fragment",
+        "avb_unlocked.fragment",
+    ],
+    srcarch = "..",
 )
 
 pkg_files(
