@@ -1,8 +1,0 @@
-. ${ROOT_DIR}/u-boot/build.config.arm
-
-DEFCONFIG=am57xx_evm_defconfig
-
-FILES="
-MLO
-u-boot.img
-"

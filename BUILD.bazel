@@ -5,31 +5,6 @@ load("@rules_python//python:py_runtime_pair.bzl", "py_runtime_pair")
 load("//build/kernel/kleaf:kernel.bzl", "kernel_build", "kernel_compile_commands")
 
 kernel_build(
-    name = "beagle_x15",
-    outs = [
-        "MLO",
-        "u-boot.img",
-    ],
-    build_config = "build.config.beagle_x15",
-    deps = [
-        "//prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9:binaries",
-    ],
-)
-
-pkg_files(
-    name = "beagle_x15_dist_files",
-    srcs = [":beagle_x15"],
-    strip_prefix = strip_prefix.files_only(),
-    visibility = ["//visibility:private"],
-)
-
-pkg_install(
-    name = "beagle_x15_dist",
-    srcs = [":beagle_x15_dist_files"],
-    destdir = "out/u-boot/dist",
-)
-
-kernel_build(
     name = "crosvm_aarch64",
     outs = [
         "System.map",
@@ -283,38 +258,6 @@ pkg_install(
 )
 
 kernel_build(
-    name = "qemu_arm",
-    outs = [
-        "System.map",
-        "u-boot",
-        "u-boot.bin",
-    ],
-    arch = "arm",
-    build_config = "build.config.qemu.arm",
-    deps = [
-        "//prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9:binaries",
-    ],
-)
-
-kernel_compile_commands(
-    name = "qemu_arm_compile_commands",
-    kernel_build = ":qemu_arm",
-)
-
-pkg_files(
-    name = "qemu_arm_dist_files",
-    srcs = [":qemu_arm"],
-    strip_prefix = strip_prefix.files_only(),
-    visibility = ["//visibility:private"],
-)
-
-pkg_install(
-    name = "qemu_arm_dist",
-    srcs = [":qemu_arm_dist_files"],
-    destdir = "out/u-boot/dist",
-)
-
-kernel_build(
     name = "qemu_riscv64",
     outs = [
         "System.map",
@@ -335,57 +278,6 @@ pkg_files(
 pkg_install(
     name = "qemu_riscv64_dist",
     srcs = [":qemu_riscv64_dist_files"],
-    destdir = "out/u-boot/dist",
-)
-
-kernel_build(
-    name = "rockpi4",
-    outs = [
-        "idbloader.img",
-        "u-boot.itb",
-    ],
-    build_config = "build.config.rockpi4",
-    deps = [
-        "//prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9:binaries",
-    ],
-)
-
-pkg_files(
-    name = "rockpi4_dist_files",
-    srcs = [":rockpi4"],
-    strip_prefix = strip_prefix.files_only(),
-    visibility = ["//visibility:private"],
-)
-
-pkg_install(
-    name = "rockpi4_dist",
-    srcs = [":rockpi4_dist_files"],
-    destdir = "out/u-boot-mainline/dist",
-)
-
-kernel_build(
-    name = "xen_aarch64",
-    outs = [
-        "System.map",
-        "u-boot",
-        "u-boot.bin",
-    ],
-    build_config = "build.config.xen.aarch64",
-    deps = [
-        "//prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9:binaries",
-    ],
-)
-
-pkg_files(
-    name = "xen_aarch64_dist_files",
-    srcs = [":xen_aarch64"],
-    strip_prefix = strip_prefix.files_only(),
-    visibility = ["//visibility:private"],
-)
-
-pkg_install(
-    name = "xen_aarch64_dist",
-    srcs = [":xen_aarch64_dist_files"],
     destdir = "out/u-boot/dist",
 )
 
