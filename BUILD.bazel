@@ -55,7 +55,7 @@ kernel_build(
     arch = "x86_64",
     build_config = "build.config.kiwi",
     check_defconfig = "disabled",
-    defconfig = "configs/qemu-x86_defconfig",
+    defconfig = "configs/qemu-x86_64_defconfig",
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "x86.fragment",
@@ -98,7 +98,7 @@ kernel_build(
     arch = "x86_64",
     build_config = "build.config.kiwi_p",
     check_defconfig = "disabled",
-    defconfig = "configs/qemu-x86_defconfig",
+    defconfig = "configs/qemu-x86_64_defconfig",
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "x86.fragment",
@@ -142,7 +142,7 @@ kernel_build(
     arch = "x86_64",
     build_config = "build.config.qemu.x86_64",
     check_defconfig = "disabled",
-    defconfig = "configs/qemu-x86_defconfig",
+    defconfig = "configs/qemu-x86_64_defconfig",
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "x86.fragment",
