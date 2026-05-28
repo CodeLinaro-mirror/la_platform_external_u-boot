@@ -153,60 +153,55 @@ static int merge_node(void *dst_fdt, int dst_node_off, const void *src_fdt,
  * Note that in the GBL/CF flow, the base `dtb` is known to be free of phandles,
  * so this limitation is safely avoided in practice.
  */
-static efi_status_t EFIAPI efi_dt_fixup_merge(struct efi_dt_fixup_protocol *this,
-					      void *dtb, size_t *buffer_size,
-					      u32 flags)
+static efi_status_t EFIAPI efi_dt_fixup_merge(
+	struct efi_dt_fixup_protocol *this, void *dtb, size_t *buffer_size)
 {
-	EFI_ENTRY("%p, %p, %p, %d", this, dtb, buffer_size, flags);
+	EFI_ENTRY("%p, %p, %p", this, dtb, buffer_size);
 
-	if (!dtb || !buffer_size || !flags || (flags & ~EFI_DT_ALL) ||
-	    fdt_check_header(dtb)) {
+	if (!dtb || !buffer_size || fdt_check_header(dtb)) {
 		log_err("%s: invalid parameters\n", __func__);
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	if (flags & EFI_DT_APPLY_FIXUPS) {
-		void *fdt_fw = efi_get_configuration_table(&efi_guid_fdt);
+	void *fdt_fw = efi_get_configuration_table(&efi_guid_fdt);
 
-		if (!fdt_fw) {
-			log_warning("%s: FW DT not found in EFI config table\n",
-				    __func__);
-			return EFI_EXIT(EFI_SUCCESS);
-		}
-		if (fdt_check_header(fdt_fw) < 0) {
-			log_err("%s: FW DT header check failed\n", __func__);
-			return EFI_EXIT(EFI_DEVICE_ERROR);
-		}
-
-		size_t required = fdt_totalsize(dtb) + fdt_totalsize(fdt_fw);
-
-		if (required > *buffer_size) {
-			log_err("%s: buffer too small (required %zu, available %zu)\n",
-				__func__, required, *buffer_size);
-			*buffer_size = required;
-			return EFI_EXIT(EFI_BUFFER_TOO_SMALL);
-		}
-
-		if (fdt_open_into(dtb, dtb, *buffer_size) < 0) {
-			log_err("%s: fdt_open_into failed\n", __func__);
-			return EFI_EXIT(EFI_DEVICE_ERROR);
-		}
-
-		if (merge_node(dtb, 0, fdt_fw, 0) < 0) {
-			log_err("%s: merge_node failed\n", __func__);
-			return EFI_EXIT(EFI_DEVICE_ERROR);
-		}
-
-		if (merge_bootargs(dtb, fdt_fw) < 0) {
-			log_err("%s: merge_bootargs failed\n", __func__);
-			return EFI_EXIT(EFI_DEVICE_ERROR);
-		}
-
-		fdt_pack(dtb);
-		*buffer_size = fdt_totalsize(dtb);
-		log_info("%s: merge success, final size %zu\n", __func__,
-			 *buffer_size);
+	if (!fdt_fw) {
+		log_warning("%s: FW DT not found in EFI config table\n",
+			    __func__);
+		return EFI_EXIT(EFI_SUCCESS);
 	}
+	if (fdt_check_header(fdt_fw) < 0) {
+		log_err("%s: FW DT header check failed\n", __func__);
+		return EFI_EXIT(EFI_DEVICE_ERROR);
+	}
+
+	size_t required = fdt_totalsize(dtb) + fdt_totalsize(fdt_fw);
+
+	if (required > *buffer_size) {
+		log_err("%s: buffer too small (required %zu, available %zu)\n",
+			__func__, required, *buffer_size);
+		*buffer_size = required;
+		return EFI_EXIT(EFI_BUFFER_TOO_SMALL);
+	}
+
+	if (fdt_open_into(dtb, dtb, *buffer_size) < 0) {
+		log_err("%s: fdt_open_into failed\n", __func__);
+		return EFI_EXIT(EFI_DEVICE_ERROR);
+	}
+
+	if (merge_node(dtb, 0, fdt_fw, 0) < 0) {
+		log_err("%s: merge_node failed\n", __func__);
+		return EFI_EXIT(EFI_DEVICE_ERROR);
+	}
+
+	if (merge_bootargs(dtb, fdt_fw) < 0) {
+		log_err("%s: merge_bootargs failed\n", __func__);
+		return EFI_EXIT(EFI_DEVICE_ERROR);
+	}
+
+	fdt_pack(dtb);
+	*buffer_size = fdt_totalsize(dtb);
+	log_info("%s: merge success, final size %zu\n", __func__, *buffer_size);
 
 	return EFI_EXIT(EFI_SUCCESS);
 }
