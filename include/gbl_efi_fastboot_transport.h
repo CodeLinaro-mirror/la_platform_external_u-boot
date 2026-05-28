@@ -8,6 +8,8 @@
 #include <efi.h>
 #include <efi_api.h>
 
+#define GBL_EFI_FASTBOOT_TRANSPORT_PROTOCOL_REVISION 0x00010000
+
 extern const efi_guid_t gbl_efi_fastboot_transport_guid;
 
 typedef enum {

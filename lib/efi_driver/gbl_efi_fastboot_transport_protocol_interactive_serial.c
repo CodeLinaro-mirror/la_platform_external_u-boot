@@ -196,7 +196,7 @@ efi_status_t gbl_efi_fastboot_transport_interactive_serial_register(void)
 
 static struct gbl_efi_fastboot_transport_protocol
 	gbl_efi_fastboot_transport_interactive_serial_proto = {
-		.revision = 1,
+		.revision = GBL_EFI_FASTBOOT_TRANSPORT_PROTOCOL_REVISION,
 		.description = DESCRIPTION,
 		.start = start,
 		.stop = stop,

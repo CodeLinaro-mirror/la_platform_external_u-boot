@@ -17,7 +17,7 @@
 
 #include <efi_api.h>
 
-#define GBL_EFI_OS_CONFIGURATION_PROTOCOL_REVISION 0x00000100
+#define GBL_EFI_OS_CONFIGURATION_PROTOCOL_REVISION 0x00010000
 
 enum gbl_efi_device_tree_type {
 	GBL_EFI_DEVICE_TREE_TYPE_DEVICE_TREE,
@@ -37,7 +37,8 @@ struct gbl_efi_device_tree_metadata {
 	u32 type;
 	u32 id;
 	u32 rev;
-	u32 custom[4];
+	size_t custom_size;
+	const u8 *custom;
 };
 
 struct gbl_efi_verified_device_tree {

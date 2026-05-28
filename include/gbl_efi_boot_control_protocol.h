@@ -7,7 +7,7 @@
 
 #include <efi_api.h>
 
-#define GBL_EFI_BOOT_CONTROL_REVISION 0x00000100
+#define GBL_EFI_BOOT_CONTROL_REVISION 0x00010000
 
 enum gbl_efi_unbootable_reason {
 	GBL_EFI_UNBOOTABLE_REASON_UNKNOWN_REASON = 0,

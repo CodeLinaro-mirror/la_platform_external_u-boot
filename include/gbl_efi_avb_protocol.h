@@ -8,7 +8,7 @@
 #include <efi.h>
 #include <efi_api.h>
 
-#define GBL_EFI_AVB_PROTOCOL_REVISION 0x00000100
+#define GBL_EFI_AVB_PROTOCOL_REVISION 0x00010000
 
 typedef u64 gbl_efi_avb_partition_flags;
 #define GBL_EFI_AVB_PARTITION_FLAG_VERIFY (1ULL << 0)
