@@ -12,9 +12,11 @@ kernel_build(
         "u-boot.bin",
     ],
     build_config = "build.config.crosvm.aarch64",
-    defconfig = "configs/qemu_arm64_defconfig",
-    srcarch = "..",
     check_defconfig = "disabled",
+    defconfig = "configs/qemu_arm64_defconfig",
+    make_goals = [
+        "all",
+    ],
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "arm.fragment",
@@ -22,6 +24,7 @@ kernel_build(
         "crosvm.fragment",
         "crosvm-aarch64.fragment",
     ],
+    srcarch = "..",
     deps = [
         "//prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9:binaries",
     ],
@@ -56,6 +59,9 @@ kernel_build(
     build_config = "build.config.kiwi",
     check_defconfig = "disabled",
     defconfig = "configs/qemu-x86_defconfig",
+    make_goals = [
+        "all",
+    ],
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "x86.fragment",
@@ -99,6 +105,9 @@ kernel_build(
     build_config = "build.config.kiwi_p",
     check_defconfig = "disabled",
     defconfig = "configs/qemu-x86_defconfig",
+    make_goals = [
+        "all",
+    ],
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "x86.fragment",
@@ -143,6 +152,9 @@ kernel_build(
     build_config = "build.config.qemu.x86_64",
     check_defconfig = "disabled",
     defconfig = "configs/qemu-x86_64_defconfig",
+    make_goals = [
+        "all",
+    ],
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "x86.fragment",
@@ -181,6 +193,9 @@ kernel_build(
     ],
     arch = "x86_64",
     build_config = "build.config.crosvm.x86",
+    make_goals = [
+        "all",
+    ],
     deps = [
         "//prebuilts/gcc/linux-x86/x86/x86_64-linux-android-4.9:binaries",
     ],
@@ -215,6 +230,9 @@ kernel_build(
     build_config = "build.config.crosvm.x86_64",
     check_defconfig = "disabled",
     defconfig = "configs/qemu-x86_64_defconfig",
+    make_goals = [
+        "all",
+    ],
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "x86.fragment",
@@ -256,6 +274,9 @@ kernel_build(
     build_config = "build.config.gem5.aarch64",
     check_defconfig = "disabled",
     defconfig = "configs/qemu_arm64_defconfig",
+    make_goals = [
+        "all",
+    ],
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "gem5-aarch64.fragment",
@@ -297,6 +318,9 @@ kernel_build(
     build_config = "build.config.qemu.aarch64",
     check_defconfig = "disabled",
     defconfig = "configs/qemu_arm64_defconfig",
+    make_goals = [
+        "all",
+    ],
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "arm.fragment",
@@ -337,6 +361,9 @@ kernel_build(
     build_config = "build.config.qemu.riscv64",
     check_defconfig = "disabled",
     defconfig = "configs/qemu-riscv64_smode_defconfig",
+    make_goals = [
+        "all",
+    ],
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "riscv64.fragment",
