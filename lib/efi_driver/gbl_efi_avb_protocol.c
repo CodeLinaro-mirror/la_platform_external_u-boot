@@ -112,8 +112,9 @@ read_persistent_value(struct gbl_efi_avb_protocol *this, const char *name,
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	// TODO(b/507132906): implement once DM_VERITY support is needed
-	return EFI_EXIT(EFI_UNSUPPORTED);
+	// TODO(b/507132906): Cuttlefish does not yet support persistent values.
+	// Return NOT_FOUND so that GBL/libavb handles it as "value not set" instead of failing.
+	return EFI_EXIT(EFI_NOT_FOUND);
 }
 
 static efi_status_t EFIAPI
@@ -126,7 +127,7 @@ write_persistent_value(struct gbl_efi_avb_protocol *this, const char *name,
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	// TODO(b/507132906): implement once DM_VERITY support is needed
+	// TODO(b/507132906): Cuttlefish does not yet support persistent values.
 	return EFI_EXIT(EFI_UNSUPPORTED);
 }
 
