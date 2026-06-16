@@ -35,7 +35,7 @@ int board_init(void)
 
 int board_late_init(void)
 {
-	ulong fdtaddr, kernel_start;
+	ulong kernel_start;
 	const char *bootargs;
 	ofnode chosen_node;
 	int ret;
@@ -44,8 +44,9 @@ int board_late_init(void)
 	if (CONFIG_IS_ENABLED(USB_KEYBOARD))
 		usb_init();
 
-	fdtaddr = (ulong)board_fdt_blob_setup(&ret);
-	env_set_hex("fdtaddr", fdtaddr);
+	/* Use the relocated (live) FDT pointer; the pre-relocation address
+	 * may sit in memory that U-Boot's own relocation overwrites. */
+	env_set_hex("fdtaddr", (ulong)gd->fdt_blob);
 #ifdef CONFIG_SYS_LOAD_ADDR
 	env_set_hex("loadaddr", (ulong)CONFIG_SYS_LOAD_ADDR);
 #endif
