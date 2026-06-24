@@ -22,6 +22,20 @@ PYMOD_INCLUDE_DIRS = --include-dirs=$(subst $(eval ),:,$(wildcard $(dir $(realpa
 # HACK: The double $$ in HOSTLDFLAGS becomes PID in shell. Fix it.
 HOSTLDFLAGS := $(subst $$$$,$$,$(HOSTLDFLAGS))
 
+# ANDROID: Support Bazel-precompiled pylibfdt
+# The paths are passed natively from the Bazel environment via build.config.pylibfdt
+ifneq ($(KLEAF_PRECOMPILED_LIBFDT_SO),)
+$(obj)/_libfdt.so: $(KLEAF_PRECOMPILED_LIBFDT_SO) FORCE
+	$(call cmd,shipped)
+
+$(obj)/libfdt.py: $(KLEAF_PRECOMPILED_LIBFDT_PY) FORCE
+	$(call cmd,shipped)
+
+rebuild:
+	@:
+else
+# END ANDROID
+
 quiet_cmd_pymod = PYMOD   $@
       cmd_pymod = unset CROSS_COMPILE; unset CFLAGS; \
 		CC="$(HOSTCC)" LDSHARED="$(HOSTCC) -shared " \
@@ -44,6 +58,10 @@ rebuild: $(src)/setup.py $(PYLIBFDT_srcs)
 
 $(obj)/_libfdt.so $(obj)/libfdt.py &: rebuild
 	@:
+
+# ANDROID: Close the ifneq block
+endif
+# END ANDROID
 
 always += _libfdt.so libfdt.py
 

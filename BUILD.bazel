@@ -1,8 +1,11 @@
 load("@kernel_toolchain_info//:dict.bzl", "CLANG_VERSION")
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_pkg//pkg:install.bzl", "pkg_install")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_files", "strip_prefix")
 load("@rules_python//python:py_runtime_pair.bzl", "py_runtime_pair")
-load("//build/kernel/kleaf:kernel.bzl", "kernel_build", "kernel_compile_commands")
+load("//build/kernel/kleaf:hermetic_tools.bzl", "hermetic_genrule")
+load("//build/kernel/kleaf:kernel.bzl", "kernel_build", "kernel_build_config", "kernel_compile_commands")
+load("//u-boot:pylibfdt.bzl", "pylibfdt_swig")
 
 kernel_build(
     name = "crosvm_aarch64",
@@ -48,6 +51,14 @@ pkg_install(
     destdir = "out/u-boot/dist",
 )
 
+kernel_build_config(
+    name = "kiwi_build_config",
+    srcs = [
+        "build.config.kiwi",
+        ":build.config.pylibfdt",
+    ],
+)
+
 kernel_build(
     name = "kiwi",
     outs = [
@@ -56,7 +67,7 @@ kernel_build(
         "u-boot.rom",
     ],
     arch = "x86_64",
-    build_config = "build.config.kiwi",
+    build_config = ":kiwi_build_config",
     check_defconfig = "disabled",
     defconfig = "configs/qemu-x86_defconfig",
     make_goals = [
@@ -72,6 +83,8 @@ kernel_build(
     ],
     srcarch = "..",
     deps = [
+        ":_libfdt.so",
+        ":pylibfdt_swig_gen",
         "//prebuilts/gcc/linux-x86/x86/x86_64-linux-android-4.9:binaries",
     ],
 )
@@ -94,6 +107,14 @@ pkg_install(
     destdir = "out/u-boot/dist",
 )
 
+kernel_build_config(
+    name = "kiwi_p_build_config",
+    srcs = [
+        "build.config.kiwi_p",
+        ":build.config.pylibfdt",
+    ],
+)
+
 kernel_build(
     name = "kiwi_p",
     outs = [
@@ -102,7 +123,7 @@ kernel_build(
         "u-boot.rom",
     ],
     arch = "x86_64",
-    build_config = "build.config.kiwi_p",
+    build_config = ":kiwi_p_build_config",
     check_defconfig = "disabled",
     defconfig = "configs/qemu-x86_defconfig",
     make_goals = [
@@ -119,6 +140,8 @@ kernel_build(
     ],
     srcarch = "..",
     deps = [
+        ":_libfdt.so",
+        ":pylibfdt_swig_gen",
         "//prebuilts/gcc/linux-x86/x86/x86_64-linux-android-4.9:binaries",
     ],
 )
@@ -141,6 +164,14 @@ pkg_install(
     destdir = "out/u-boot/dist",
 )
 
+kernel_build_config(
+    name = "qemu_x86_64_build_config",
+    srcs = [
+        "build.config.qemu.x86_64",
+        ":build.config.pylibfdt",
+    ],
+)
+
 kernel_build(
     name = "qemu_x86_64",
     outs = [
@@ -149,7 +180,7 @@ kernel_build(
         "u-boot.rom",
     ],
     arch = "x86_64",
-    build_config = "build.config.qemu.x86_64",
+    build_config = ":qemu_x86_64_build_config",
     check_defconfig = "disabled",
     defconfig = "configs/qemu-x86_64_defconfig",
     make_goals = [
@@ -162,6 +193,8 @@ kernel_build(
     ],
     srcarch = "..",
     deps = [
+        ":_libfdt.so",
+        ":pylibfdt_swig_gen",
         "//prebuilts/gcc/linux-x86/x86/x86_64-linux-android-4.9:binaries",
     ],
 )
@@ -219,6 +252,14 @@ pkg_install(
     destdir = "out/u-boot/dist",
 )
 
+kernel_build_config(
+    name = "crosvm_x86_64_build_config",
+    srcs = [
+        "build.config.crosvm.x86_64",
+        ":build.config.pylibfdt",
+    ],
+)
+
 kernel_build(
     name = "crosvm_x86_64",
     outs = [
@@ -227,7 +268,7 @@ kernel_build(
         "u-boot.rom",
     ],
     arch = "x86_64",
-    build_config = "build.config.crosvm.x86_64",
+    build_config = ":crosvm_x86_64_build_config",
     check_defconfig = "disabled",
     defconfig = "configs/qemu-x86_64_defconfig",
     make_goals = [
@@ -242,6 +283,8 @@ kernel_build(
     ],
     srcarch = "..",
     deps = [
+        ":_libfdt.so",
+        ":pylibfdt_swig_gen",
         "//prebuilts/gcc/linux-x86/x86/x86_64-linux-android-4.9:binaries",
     ],
 )
@@ -398,4 +441,68 @@ toolchain(
     name = "py_toolchain",
     toolchain = ":py_runtime_pair",
     toolchain_type = "@bazel_tools//tools/python:toolchain_type",
+)
+
+# pylibfdt targets added/migrated for Python 3.12+ compatibility
+filegroup(
+    name = "libfdt_sources",
+    srcs = glob([
+        "scripts/dtc/libfdt/*.c",
+        "scripts/dtc/libfdt/*.h",
+    ]),
+)
+
+filegroup(
+    name = "pylibfdt_include_dirs",
+    srcs = [
+        "scripts/dtc",
+        "scripts/dtc/libfdt",
+    ],
+)
+
+pylibfdt_swig(
+    name = "pylibfdt_swig_gen",
+    src = "scripts/dtc/pylibfdt/libfdt.i_shipped",
+    include_dirs = [":pylibfdt_include_dirs"],
+    libfdt_sources = [":libfdt_sources"],
+)
+
+filegroup(
+    name = "pylibfdt_c_wrapper",
+    srcs = [":pylibfdt_swig_gen"],
+    output_group = "wrapper",
+)
+
+# cc_binary with linkshared = True is used instead of cc_library to build the
+# Python C extension because:
+# 1. It produces a standalone shared library (.so) as its default output.
+# 2. It preserves the target name (_libfdt.so) without prepending the standard
+#    library prefix "lib", which Python strictly requires to import the module.
+cc_binary(
+    name = "_libfdt.so",
+    srcs = [
+        ":libfdt_sources",
+        ":pylibfdt_c_wrapper",
+    ],
+    copts = [
+        # From scripts/dtc/pylibfdt/Makefile
+        "-Wno-self-assign",
+        "-Wno-sign-compare",
+    ],
+    features = ["kleaf-python-headers"],
+    includes = ["scripts/dtc/libfdt"],
+    linkshared = True,
+)
+
+hermetic_genrule(
+    name = "generate_pylibfdt_env",
+    srcs = [
+        ":_libfdt.so",
+        ":pylibfdt_swig_gen",
+    ],
+    outs = ["build.config.pylibfdt"],
+    cmd = """
+        echo "export KLEAF_PRECOMPILED_LIBFDT_SO=\\$$ROOT_DIR/$(execpath :_libfdt.so)" > $@
+        echo "export KLEAF_PRECOMPILED_LIBFDT_PY=\\$$ROOT_DIR/$(execpath :pylibfdt_swig_gen)" >> $@
+    """,
 )
