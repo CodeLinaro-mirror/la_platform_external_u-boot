@@ -1,8 +1,0 @@
-. ${ROOT_DIR}/u-boot/build.config.common
-. ${ROOT_DIR}/u-boot/build.config.x86_64
-
-POST_DEFCONFIG_CMDS=""
-
-# binman requires HOME to be set, but HOME is unset by Kleaf.
-# Hence manually set it to a fake value.
-HOME=${HOME:-/tmp/home}
