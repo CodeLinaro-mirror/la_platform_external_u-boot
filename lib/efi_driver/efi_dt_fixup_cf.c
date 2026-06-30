@@ -7,13 +7,15 @@
 #include <efi_dt_fixup.h>
 #include <efi_loader.h>
 #include <efi_rng.h>
-#include <fdtdec.h>
 #include <linux/libfdt.h>
 #include <linux/string.h>
 #include <log.h>
 
 #define CHOSEN "/chosen"
+#define RESERVED_MEMORY "/reserved-memory"
 #define BOOTARGS "bootargs"
+#define ADDRESS_CELLS "#address-cells"
+#define SIZE_CELLS "#size-cells"
 
 /* merge_bootargs() - Appends source bootargs to destination with a space
  * separator.
@@ -132,12 +134,176 @@ static int merge_node(void *dst_fdt, int dst_node_off, const void *src_fdt,
 	return 0;
 }
 
+/* read_cells() - Read an explicit #address-cells/#size-cells value.
+ *
+ * Returns the cells value when 'name' is present on 'node' and valid, 0 when
+ * it is absent, or a negative FDT error when it is present but malformed.
+ */
+static int read_cells(const void *fdt, int node, const char *name)
+{
+	int len;
+	const fdt32_t *p = fdt_getprop(fdt, node, name, &len);
+
+	if (!p)
+		return len == -FDT_ERR_NOTFOUND ? 0 : len;
+	if (len != sizeof(*p))
+		return -FDT_ERR_BADNCELLS;
+
+	u32 val = fdt32_ld(p);
+	if (val < 1 || val > 2)
+		return -FDT_ERR_BADNCELLS;
+
+	return val;
+}
+
+/* decode_cells() - Read 'cells' big-endian FDT cells into a 64-bit value.
+ *
+ * Advances *p past the cells read. 'cells' is 1 or 2.
+ */
+static u64 decode_cells(const fdt32_t **p, int cells)
+{
+	u64 val = 0;
+
+	while (cells--)
+		val = (val << 32) | fdt32_ld((*p)++);
+
+	return val;
+}
+
+/* encode_cells() - Write 'val' as 'cells' big-endian FDT cells.
+ *
+ * Returns the number of cells written. 'cells' is 1 or 2 and 'val' is
+ * guaranteed to fit, both ensured by the caller.
+ */
+static u32 encode_cells(fdt32_t *p, u64 val, int cells)
+{
+	if (cells == 2)
+		fdt32_st(p++, val >> 32);
+	fdt32_st(p, val);
+
+	return cells;
+}
+
+/* reserved-memory regions realistically carry a single reg entry */
+#define MAX_REG_ENTRIES 64
+
+/* reencode_reg() - Rewrite one node's "reg" from old to new cell widths.
+ *
+ * Decodes every (address, size) entry using the old cells, then rewrites the
+ * property in place at the new width. Nodes without a "reg" (dynamic
+ * carve-outs) are left untouched.
+ */
+static int reencode_reg(void *fdt, int node, int old_na, int old_ns, int new_na,
+			int new_ns)
+{
+	int len;
+	const fdt32_t *reg = fdt_getprop(fdt, node, "reg", &len);
+	if (!reg || len == 0)
+		return 0;
+
+	int old_stride = old_na + old_ns;
+	if (len % (int)(old_stride * sizeof(fdt32_t)))
+		return -FDT_ERR_BADVALUE;
+
+	int n = len / (old_stride * sizeof(fdt32_t));
+	if (n > MAX_REG_ENTRIES)
+		return -FDT_ERR_BADVALUE;
+
+	u64 addr[MAX_REG_ENTRIES], size[MAX_REG_ENTRIES];
+	for (int i = 0; i < n; i++) {
+		addr[i] = decode_cells(&reg, old_na);
+		size[i] = decode_cells(&reg, old_ns);
+		if ((new_na == 1 && (addr[i] >> 32)) ||
+		    (new_ns == 1 && (size[i] >> 32)))
+			return -FDT_ERR_BADVALUE;
+	}
+
+	void *prop;
+	int new_len = n * (new_na + new_ns) * sizeof(fdt32_t);
+	int ret = fdt_setprop_placeholder(fdt, node, "reg", new_len, &prop);
+	if (ret < 0)
+		return ret;
+
+	fdt32_t *p = prop;
+	for (int i = 0; i < n; i++) {
+		p += encode_cells(p, addr[i], new_na);
+		p += encode_cells(p, size[i], new_ns);
+	}
+
+	return 0;
+}
+
+/* override_reserved_memory() - Adopt the firmware DT's address width.
+ *
+ * The firmware DT defines the platform #address-cells/#size-cells, and the
+ * kernel drops /reserved-memory whose cells do not match the root. Set the app
+ * root cells to the firmware's and re-encode the app's own reserved-memory
+ * regions to that width so the kernel keeps the reservations.
+ */
+static int override_reserved_memory(void *dst, const void *fw)
+{
+	int root_na = read_cells(fw, 0, ADDRESS_CELLS);
+	int root_ns = read_cells(fw, 0, SIZE_CELLS);
+	int resv_mem, node, ret;
+
+	/* Malformed cells fail the merge, absent cells leave the app as-is. */
+	if (root_na < 0 || root_ns < 0)
+		return -FDT_ERR_BADNCELLS;
+	if (!root_na || !root_ns)
+		return 0;
+
+	/* Override the app root cells with the firmware's. */
+	ret = fdt_setprop_u32(dst, 0, ADDRESS_CELLS, root_na);
+	if (ret < 0)
+		return ret;
+	ret = fdt_setprop_u32(dst, 0, SIZE_CELLS, root_ns);
+	if (ret < 0)
+		return ret;
+
+	resv_mem = fdt_path_offset(dst, RESERVED_MEMORY);
+	if (resv_mem < 0)
+		return 0;
+
+	int resv_na = read_cells(dst, resv_mem, ADDRESS_CELLS);
+	int resv_ns = read_cells(dst, resv_mem, SIZE_CELLS);
+
+	if (resv_na < 0 || resv_ns < 0)
+		return -FDT_ERR_BADNCELLS;
+	if (!resv_na || !resv_ns)
+		return 0;
+
+	/* Already at the firmware root width, nothing to re-encode. */
+	if (resv_na == root_na && resv_ns == root_ns)
+		return 0;
+
+	log_info("%s: re-encoding /reserved-memory cells %d/%d -> %d/%d\n",
+		 __func__, resv_na, resv_ns, root_na, root_ns);
+
+	fdt_for_each_subnode(node, dst, resv_mem)
+	{
+		ret = reencode_reg(dst, node, resv_na, resv_ns, root_na,
+				   root_ns);
+		if (ret < 0)
+			return ret;
+	}
+
+	ret = fdt_setprop_u32(dst, resv_mem, ADDRESS_CELLS, root_na);
+	if (ret < 0)
+		return ret;
+
+	return fdt_setprop_u32(dst, resv_mem, SIZE_CELLS, root_ns);
+}
+
 /* efi_dt_fixup_merge() - EFI_DT_FIXUP_PROTOCOL implementation to merge FW DT
  * into UEFI app DT.
  *
  * Obtains the FW DT from the EFI configuration table and merges its missing
  * nodes and properties into the provided DTB. Special handling is applied to
- * 'bootargs', which are appended.
+ * 'bootargs', which are appended rather than overwritten. The app root
+ * #address-cells/#size-cells are overridden with the firmware's and the app's
+ * /reserved-memory regions re-encoded to match, before the firmware nodes are
+ * merged in. The firmware DT owns the platform address width, and the kernel
+ * rejects /reserved-memory unless its cells match the root.
  *
  * On hardware, the UEFI application is usually the source of truth for the FDT.
  * However, in VM environments (e.g., QEMU or Crosvm), the VMM-injected DT must
@@ -186,6 +352,11 @@ static efi_status_t EFIAPI efi_dt_fixup_merge(
 
 	if (fdt_open_into(dtb, dtb, *buffer_size) < 0) {
 		log_err("%s: fdt_open_into failed\n", __func__);
+		return EFI_EXIT(EFI_DEVICE_ERROR);
+	}
+
+	if (override_reserved_memory(dtb, fdt_fw) < 0) {
+		log_err("%s: override_reserved_memory failed\n", __func__);
 		return EFI_EXIT(EFI_DEVICE_ERROR);
 	}
 
