@@ -7,6 +7,13 @@ load("//build/kernel/kleaf:hermetic_tools.bzl", "hermetic_genrule")
 load("//build/kernel/kleaf:kernel.bzl", "kernel_build", "kernel_build_config", "kernel_compile_commands")
 load("//u-boot:pylibfdt.bzl", "pylibfdt_swig")
 
+hermetic_genrule(
+    name = "fake_pahole",
+    outs = ["fake_pahole.sh"],
+    cmd = "echo '#!/bin/sh\nexit 0' > $@",
+    executable = True,
+)
+
 kernel_build(
     name = "crosvm_aarch64",
     outs = [
@@ -20,6 +27,7 @@ kernel_build(
     make_goals = [
         "all",
     ],
+    pahole = ":fake_pahole",
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "arm.fragment",
@@ -73,6 +81,7 @@ kernel_build(
     make_goals = [
         "all",
     ],
+    pahole = ":fake_pahole",
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "x86.fragment",
@@ -116,6 +125,7 @@ kernel_build(
     make_goals = [
         "all",
     ],
+    pahole = ":fake_pahole",
     deps = [
         "//prebuilts/gcc/linux-x86/x86/x86_64-linux-android-4.9:binaries",
     ],
@@ -161,6 +171,7 @@ kernel_build(
     make_goals = [
         "all",
     ],
+    pahole = ":fake_pahole",
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "x86.fragment",
@@ -207,6 +218,7 @@ kernel_build(
     make_goals = [
         "all",
     ],
+    pahole = ":fake_pahole",
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "gem5-aarch64.fragment",
@@ -251,6 +263,7 @@ kernel_build(
     make_goals = [
         "all",
     ],
+    pahole = ":fake_pahole",
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "arm.fragment",
@@ -294,6 +307,7 @@ kernel_build(
     make_goals = [
         "all",
     ],
+    pahole = ":fake_pahole",
     pre_defconfig_fragments = [
         "qemu-minimal.fragment",
         "riscv64.fragment",
