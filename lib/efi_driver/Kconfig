@@ -16,6 +16,16 @@ config GBL_EFI_AVB_PROTOCOL
 	  This protocol is used for platform-specific AVB logic, including
 	  lock state management, rollback protection, and public key validation.
 
+config GBL_EFI_AVF_PROTOCOL_MOCK
+	bool "Include GBL Android Virtualization Framework protocol mock implementation"
+	depends on EFI_LOADER && ARM64
+	help
+	  Include the mock driver for the custom GBL Android Virtualization Framework
+	  protocol. This protocol is used to provide dummy vendor DICE handover and
+	  Secretkeeper public key to GBL.
+	  Note: This protocol is installed only when U-Boot is running at EL2 on
+	  AArch64 devices.
+
 config GBL_EFI_FASTBOOT_PROTOCOL
 	bool "Include GBL Fastboot customization protocol"
 	depends on EFI_LOADER

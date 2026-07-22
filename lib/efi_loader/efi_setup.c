@@ -12,6 +12,7 @@
 #include <efi_dt_fixup_cf.h>
 #include <gbl_efi_boot_control_protocol.h>
 #include <gbl_efi_avb_protocol.h>
+#include <gbl_efi_avf_protocol.h>
 #include <gbl_efi_fastboot_protocol.h>
 #include <gbl_efi_fastboot_transport.h>
 #include <gbl_efi_os_configuration.h>
@@ -389,6 +390,14 @@ efi_status_t efi_init_obj_list(void)
 		ret = gbl_efi_avb_register();
 		if (ret != EFI_SUCCESS) {
 			log_err("GBL Android Verified Boot Protocol initialization error\n");
+			goto out;
+		}
+	}
+
+	if (IS_ENABLED(CONFIG_GBL_EFI_AVF_PROTOCOL_MOCK)) {
+		ret = gbl_efi_avf_register();
+		if (ret != EFI_SUCCESS) {
+			log_err("GBL AVF Protocol initialization error\n");
 			goto out;
 		}
 	}
