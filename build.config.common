@@ -1,6 +1,5 @@
 . ${ROOT_DIR}/u-boot/build.config.constants
 
-BRANCH=u-boot-mainline
 SKIP_CP_KERNEL_HDR=1
 KERNEL_DIR=u-boot
 
