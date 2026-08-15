@@ -524,6 +524,7 @@ static const struct blk_ops mmc_blk_ops = {
 #if CONFIG_IS_ENABLED(MMC_WRITE)
 	.write	= mmc_bwrite,
 	.erase	= mmc_berase,
+	.erase_granularity = mmc_berase_granularity,
 #endif
 	.select_hwpart	= mmc_select_hwpart,
 };

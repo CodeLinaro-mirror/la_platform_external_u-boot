@@ -163,6 +163,15 @@ static ulong virtio_blk_erase(struct udevice *dev, lbaint_t start,
 	return done;
 }
 
+static ulong virtio_blk_erase_granularity(struct udevice *dev)
+{
+	if (!virtio_has_feature(dev, VIRTIO_BLK_F_WRITE_ZEROES))
+		return 0;
+
+	/* Write zeroes applies to individual blocks */
+	return 1;
+}
+
 static int virtio_blk_bind(struct udevice *dev)
 {
 	struct virtio_dev_priv *uc_priv = dev_get_uclass_priv(dev->parent);
@@ -229,6 +238,7 @@ static const struct blk_ops virtio_blk_ops = {
 	.read	= virtio_blk_read,
 	.write	= virtio_blk_write,
 	.erase	= virtio_blk_erase,
+	.erase_granularity = virtio_blk_erase_granularity,
 };
 
 U_BOOT_DRIVER(virtio_blk) = {

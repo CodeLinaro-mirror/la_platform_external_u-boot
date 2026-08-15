@@ -514,6 +514,18 @@ long blk_erase(struct udevice *dev, lbaint_t start, lbaint_t blkcnt)
 	return ops->erase(dev, start, blkcnt);
 }
 
+ulong blk_erase_granularity(struct udevice *dev)
+{
+	const struct blk_ops *ops = blk_get_ops(dev);
+
+	if (!ops->erase)
+		return 0;
+	if (!ops->erase_granularity)
+		return 1;
+
+	return ops->erase_granularity(dev);
+}
+
 ulong blk_dread(struct blk_desc *desc, lbaint_t start, lbaint_t blkcnt,
 		void *buffer)
 {

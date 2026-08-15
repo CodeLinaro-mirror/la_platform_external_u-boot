@@ -138,6 +138,27 @@ ulong mmc_berase(struct blk_desc *block_dev, lbaint_t start, lbaint_t blkcnt)
 	return blk;
 }
 
+#if CONFIG_IS_ENABLED(BLK)
+ulong mmc_berase_granularity(struct udevice *dev)
+{
+	struct blk_desc *block_dev = dev_get_uclass_plat(dev);
+	struct mmc *mmc = find_mmc_device(block_dev->devnum);
+
+	if (!mmc)
+		return 0;
+
+	/*
+	 * Trim applies the erase operation to write blocks instead of erase
+	 * groups, so individual blocks can be erased. Without it the card
+	 * rounds the range out to the enclosing erase groups.
+	 */
+	if (mmc->can_trim)
+		return 1;
+
+	return mmc->erase_grp_size;
+}
+#endif
+
 static ulong mmc_write_blocks(struct mmc *mmc, lbaint_t start,
 		lbaint_t blkcnt, const void *src)
 {

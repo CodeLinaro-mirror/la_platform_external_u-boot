@@ -122,6 +122,21 @@ unsigned long disk_blk_erase(struct udevice *dev, lbaint_t start,
 			 blkcnt);
 }
 
+/**
+ * disk_blk_erase_granularity() - Get the erase granularity of a partition
+ *
+ * Erases on a partition are carried out by the parent block device, so the
+ * granularity is that of the parent.
+ *
+ * @dev: Device to check (partition udevice)
+ * @return number of blocks in the smallest erasable unit, or 0 if the parent
+ * block device cannot erase
+ */
+unsigned long disk_blk_erase_granularity(struct udevice *dev)
+{
+	return blk_erase_granularity(dev_get_parent(dev));
+}
+
 UCLASS_DRIVER(partition) = {
 	.id		= UCLASS_PARTITION,
 	.per_device_plat_auto	= sizeof(struct disk_part),
@@ -132,6 +147,7 @@ static const struct blk_ops blk_part_ops = {
 	.read	= disk_blk_read,
 	.write	= disk_blk_write,
 	.erase	= disk_blk_erase,
+	.erase_granularity = disk_blk_erase_granularity,
 };
 
 U_BOOT_DRIVER(blk_partition) = {

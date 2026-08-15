@@ -240,6 +240,22 @@ struct blk_ops {
 			       lbaint_t blkcnt);
 
 	/**
+	 * erase_granularity() - get the erase granularity of a device
+	 *
+	 * Some devices (e.g. eMMC without TRIM support) can only erase whole
+	 * erase groups. On those devices an erase which is not aligned to the
+	 * granularity also affects blocks outside the requested range.
+	 *
+	 * This method is optional. If it is not provided, a device which
+	 * implements erase() is assumed to erase individual blocks.
+	 *
+	 * @dev:	Device to check
+	 * @return number of blocks in the smallest erasable unit, or 0 if the
+	 * device cannot erase
+	 */
+	unsigned long (*erase_granularity)(struct udevice *dev);
+
+	/**
 	 * select_hwpart() - select a particular hardware partition
 	 *
 	 * Some devices (e.g. MMC) can support partitioning at the hardware
@@ -330,6 +346,18 @@ long blk_write(struct udevice *dev, lbaint_t start, lbaint_t blkcnt,
  * or -ve on error. This never returns 0 unless @blkcnt is 0
  */
 long blk_erase(struct udevice *dev, lbaint_t start, lbaint_t blkcnt);
+
+/**
+ * blk_erase_granularity() - Get the erase granularity of a block device
+ *
+ * Erasing a range which is not aligned to the returned granularity may also
+ * affect blocks outside that range.
+ *
+ * @dev: Device to check
+ * @return number of blocks in the smallest erasable unit, 1 if individual
+ * blocks can be erased, or 0 if the device does not support erasing
+ */
+ulong blk_erase_granularity(struct udevice *dev);
 
 /**
  * blk_find_device() - Find a block device

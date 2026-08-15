@@ -31,6 +31,7 @@ ulong mmc_bread(struct blk_desc *block_dev, lbaint_t start, lbaint_t blkcnt,
 ulong mmc_bwrite(struct udevice *dev, lbaint_t start, lbaint_t blkcnt,
 		 const void *src);
 ulong mmc_berase(struct udevice *dev, lbaint_t start, lbaint_t blkcnt);
+ulong mmc_berase_granularity(struct udevice *dev);
 #else
 ulong mmc_bwrite(struct blk_desc *block_dev, lbaint_t start, lbaint_t blkcnt,
 		 const void *src);

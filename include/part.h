@@ -456,6 +456,15 @@ ulong disk_blk_write(struct udevice *dev, lbaint_t start, lbaint_t blkcnt,
  */
 ulong disk_blk_erase(struct udevice *dev, lbaint_t start, lbaint_t blkcnt);
 
+/**
+ * disk_blk_erase_granularity() - erase granularity of a disk partition
+ *
+ * @dev:	Device to check (UCLASS_PARTITION)
+ * Return:	number of blocks in the smallest erasable unit of the parent
+ * block device, or 0 if it does not support erasing
+ */
+ulong disk_blk_erase_granularity(struct udevice *dev);
+
 /*
  * We don't support printing partition information in SPL and only support
  * getting partition information in a few cases.
