@@ -9,6 +9,7 @@
 #include <blk.h>
 #include <dm.h>
 #include <part.h>
+#include <linux/err.h>
 #include <virtio_types.h>
 #include <virtio.h>
 #include <virtio_ring.h>
@@ -16,6 +17,7 @@
 
 struct virtio_blk_priv {
 	struct virtqueue *vq;
+	u32 max_write_zeroes_sectors;
 };
 
 static const u32 feature[] = {
@@ -130,10 +132,35 @@ static ulong virtio_blk_write(struct udevice *dev, lbaint_t start,
 static ulong virtio_blk_erase(struct udevice *dev, lbaint_t start,
 			      lbaint_t blkcnt)
 {
+	struct virtio_blk_priv *priv = dev_get_priv(dev);
+	lbaint_t done = 0;
+
 	if (!virtio_has_feature(dev, VIRTIO_BLK_F_WRITE_ZEROES))
 		return -EOPNOTSUPP;
 
-	return virtio_blk_do_req(dev, start, blkcnt, NULL, VIRTIO_BLK_T_WRITE_ZEROES);
+	if (!priv->max_write_zeroes_sectors)
+		return -EOPNOTSUPP;
+
+	/*
+	 * The device rejects a write zeroes request covering more sectors than
+	 * it advertises, so split the request into chunks it accepts.
+	 */
+	while (done < blkcnt) {
+		lbaint_t cnt = blkcnt - done;
+		ulong ret;
+
+		if (cnt > priv->max_write_zeroes_sectors)
+			cnt = priv->max_write_zeroes_sectors;
+
+		ret = virtio_blk_do_req(dev, start + done, cnt, NULL,
+					VIRTIO_BLK_T_WRITE_ZEROES);
+		if (IS_ERR_VALUE(ret))
+			return done ? done : ret;
+
+		done += ret;
+	}
+
+	return done;
 }
 
 static int virtio_blk_bind(struct udevice *dev)
@@ -186,6 +213,14 @@ static int virtio_blk_probe(struct udevice *dev)
 	desc->log2blksz = 9;
 	virtio_cread(dev, struct virtio_blk_config, capacity, &cap);
 	desc->lba = cap;
+
+	if (virtio_has_feature(dev, VIRTIO_BLK_F_WRITE_ZEROES)) {
+		u32 max_wz;
+
+		virtio_cread(dev, struct virtio_blk_config,
+			     max_write_zeroes_sectors, &max_wz);
+		priv->max_write_zeroes_sectors = max_wz ? max_wz : U32_MAX;
+	}
 
 	return 0;
 }
