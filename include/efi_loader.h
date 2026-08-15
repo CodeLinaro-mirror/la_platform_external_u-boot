@@ -303,6 +303,8 @@ extern const efi_guid_t efi_guid_host_dev;
 #endif
 /* GUID of the EFI_BLOCK_IO_PROTOCOL */
 extern const efi_guid_t efi_block_io_guid;
+/* GUID of the EFI_ERASE_BLOCK_PROTOCOL */
+extern const efi_guid_t efi_erase_block_protocol_guid;
 extern const efi_guid_t efi_global_variable_guid;
 /* GUID of GBL Vendor UEFI variables */
 extern const efi_guid_t gbl_efi_vendor_guid;
@@ -739,6 +741,8 @@ efi_status_t efi_set_timer(struct efi_event *event, enum efi_timer_delay type,
 			   uint64_t trigger_time);
 /* Call this to signal an event */
 void efi_signal_event(struct efi_event *event);
+/* Check if a pointer is a valid event */
+efi_status_t efi_is_event(const struct efi_event *event);
 
 /* return true if the device is removable */
 bool efi_disk_is_removable(efi_handle_t handle);

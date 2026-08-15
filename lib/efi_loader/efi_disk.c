@@ -19,12 +19,14 @@
 #include <log.h>
 #include <part.h>
 #include <malloc.h>
+#include <linux/math64.h>
 
 struct efi_system_partition efi_system_partition = {
 	.uclass_id = UCLASS_INVALID,
 };
 
 const efi_guid_t efi_block_io_guid = EFI_BLOCK_IO_PROTOCOL_GUID;
+const efi_guid_t efi_erase_block_protocol_guid = EFI_ERASE_BLOCK_PROTOCOL_GUID;
 const efi_guid_t efi_system_partition_guid = PARTITION_SYSTEM_GUID;
 
 /**
@@ -32,6 +34,7 @@ const efi_guid_t efi_system_partition_guid = PARTITION_SYSTEM_GUID;
  *
  * @header:	EFI object header
  * @ops:	EFI disk I/O protocol interface
+ * @erase_ops:	EFI erase block protocol interface
  * @media:	block I/O media information
  * @dp:		device path to the block device
  * @volume:	simple file system protocol of the partition
@@ -39,6 +42,7 @@ const efi_guid_t efi_system_partition_guid = PARTITION_SYSTEM_GUID;
 struct efi_disk_obj {
 	struct efi_object header;
 	struct efi_block_io ops;
+	struct efi_erase_block_protocol erase_ops;
 	struct efi_block_io_media media;
 	struct efi_device_path *dp;
 	struct efi_simple_file_system_protocol *volume;
@@ -309,6 +313,142 @@ static const struct efi_block_io block_io_disk_template = {
 };
 
 /**
+ * efi_disk_erase_blocks() - erases blocks on the device
+ *
+ * This function implements the EraseBlocks service of the
+ * EFI_ERASE_BLOCK_PROTOCOL.
+ *
+ * See the Unified Extensible Firmware Interface (UEFI) specification for
+ * details.
+ *
+ * @this:		pointer to the ERASE_BLOCK_PROTOCOL
+ * @media_id:		media ID of the block device
+ * @lba:		starting logical block address
+ * @token:		transaction token (optional)
+ * @size:		number of bytes to erase
+ * Return:		status code
+ */
+static efi_status_t EFIAPI efi_disk_erase_blocks(
+			struct efi_erase_block_protocol *this,
+			u32 media_id, u64 lba,
+			struct efi_erase_block_token *token,
+			efi_uintn_t size)
+{
+	struct efi_disk_obj *diskobj;
+	efi_status_t ret;
+	u32 blksz;
+	u32 gran;
+	u64 blocks;
+	unsigned long n;
+
+	EFI_ENTRY("%p, %x, %llx, %p, %zx", this, media_id, lba, token, size);
+
+	if (!this) {
+		ret = EFI_INVALID_PARAMETER;
+		goto out;
+	}
+
+	diskobj = container_of(this, struct efi_disk_obj, erase_ops);
+	if (media_id != diskobj->media.media_id) {
+		ret = EFI_MEDIA_CHANGED;
+		goto out;
+	}
+
+	if (!diskobj->media.media_present) {
+		ret = EFI_NO_MEDIA;
+		goto out;
+	}
+
+	if (diskobj->media.read_only) {
+		ret = EFI_WRITE_PROTECTED;
+		goto out;
+	}
+
+	/* We only support erasing whole blocks */
+	blksz = diskobj->media.block_size;
+	if (!size || size % blksz) {
+		ret = EFI_INVALID_PARAMETER;
+		goto out;
+	}
+
+	blocks = size / blksz;
+
+	/* Check the range without overflowing */
+	if (lba > diskobj->media.last_block ||
+	    blocks > diskobj->media.last_block - lba + 1) {
+		ret = EFI_INVALID_PARAMETER;
+		goto out;
+	}
+
+	/*
+	 * The device can only erase whole units of the granularity it
+	 * advertises. Erasing a partial unit would round the request out to a
+	 * whole one and destroy blocks the caller did not name, so require the
+	 * caller to align instead.
+	 */
+	gran = diskobj->erase_ops.erase_length_granularity;
+	if (gran > 1) {
+		u32 lba_rem, blocks_rem;
+
+		div_u64_rem(lba, gran, &lba_rem);
+		div_u64_rem(blocks, gran, &blocks_rem);
+		if (lba_rem || blocks_rem) {
+			ret = EFI_INVALID_PARAMETER;
+			goto out;
+		}
+	}
+
+	/*
+	 * The event is supplied by the caller. Validate it before erasing so
+	 * that an invalid event is not reported once the medium has already
+	 * been modified.
+	 */
+	if (token && token->event &&
+	    efi_is_event(token->event) != EFI_SUCCESS) {
+		ret = EFI_INVALID_PARAMETER;
+		goto out;
+	}
+
+	if (CONFIG_IS_ENABLED(PARTITIONS) &&
+	    device_get_uclass_id(diskobj->header.dev) == UCLASS_PARTITION) {
+		n = disk_blk_erase(diskobj->header.dev, lba, blocks);
+	} else {
+		/* dev is a block device (UCLASS_BLK) */
+		struct blk_desc *desc;
+
+		desc = dev_get_uclass_plat(diskobj->header.dev);
+		n = blk_derase(desc, lba, blocks);
+	}
+
+	/* We don't do interrupts, so check for timers cooperatively */
+	efi_timer_check();
+
+	EFI_PRINT("n=%lx blocks=%llx\n", n, blocks);
+
+	ret = n == blocks ? EFI_SUCCESS : EFI_DEVICE_ERROR;
+
+out:
+	if (token) {
+		token->transaction_status = ret;
+		/*
+		 * Only signal a completed transaction. The event is checked
+		 * again because efi_timer_check() above may have run a
+		 * notification function which closed it.
+		 */
+		if (ret == EFI_SUCCESS && token->event &&
+		    efi_is_event(token->event) == EFI_SUCCESS)
+			efi_signal_event(token->event);
+	}
+
+	return EFI_EXIT(ret);
+}
+
+static const struct efi_erase_block_protocol erase_block_disk_template = {
+	.revision = EFI_ERASE_BLOCK_PROTOCOL_REVISION,
+	.erase_blocks = &efi_disk_erase_blocks,
+};
+
+/**
  * efi_fs_from_path() - retrieve simple file system protocol
  *
  * Gets the simple file system protocol for a file device path.
@@ -410,6 +550,7 @@ static efi_status_t efi_disk_add_dev(
 	struct efi_disk_obj *diskobj;
 	struct efi_object *handle;
 	const efi_guid_t *esp_guid = NULL;
+	ulong erase_granularity;
 	efi_status_t ret;
 
 	/* Don't add empty devices */
@@ -464,6 +605,8 @@ static efi_status_t efi_disk_add_dev(
 		diskobj->media.last_block = desc->lba - 1;
 	}
 
+	diskobj->ops = block_io_disk_template;
+
 	/*
 	 * Install the device path and the block IO protocol.
 	 *
@@ -488,6 +631,45 @@ static efi_status_t efi_disk_add_dev(
 	}
 
 	/*
+	 * The erase block protocol is optional. Only install it if the device
+	 * can erase: EraseBlocks() has no status code to report that erasing
+	 * is unsupported, so the absence of the protocol is the only way to
+	 * tell an application to fall back to overwriting the blocks.
+	 */
+	erase_granularity = blk_erase_granularity(desc->bdev);
+
+	/* EraseLengthGranularity is a 32 bit field */
+	if (erase_granularity > U32_MAX)
+		erase_granularity = 0;
+
+	/*
+	 * The LBAs passed to EraseBlocks() on a partition are relative to the
+	 * partition start, while the device erases whole units of its
+	 * granularity in its own address space. A caller can therefore only
+	 * align its requests if the partition itself starts on such a
+	 * boundary. If it does not, no request would be safe, so do not offer
+	 * erasing at all and let the partition be overwritten instead.
+	 */
+	if (erase_granularity > 1 && part_info) {
+		u32 rem;
+
+		div_u64_rem(part_info->start, erase_granularity, &rem);
+		if (rem)
+			erase_granularity = 0;
+	}
+
+	if (erase_granularity) {
+		diskobj->erase_ops = erase_block_disk_template;
+		diskobj->erase_ops.erase_length_granularity = erase_granularity;
+
+		ret = efi_add_protocol(&diskobj->header,
+				       &efi_erase_block_protocol_guid,
+				       &diskobj->erase_ops);
+		if (ret != EFI_SUCCESS)
+			goto error;
+	}
+
+	/*
 	 * On partitions or whole disks without partitions install the
 	 * simple file system protocol if a file system is available.
 	 */
@@ -504,7 +686,6 @@ static efi_status_t efi_disk_add_dev(
 		if (ret != EFI_SUCCESS)
 			goto error;
 	}
-	diskobj->ops = block_io_disk_template;
 
 	/* Fill in EFI IO Media info (for read/write callbacks) */
 	diskobj->media.removable_media = desc->removable;

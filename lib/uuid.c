@@ -120,6 +120,10 @@ static const struct {
 		EFI_BLOCK_IO_PROTOCOL_GUID,
 	},
 	{
+		"Erase Block",
+		EFI_ERASE_BLOCK_PROTOCOL_GUID,
+	},
+	{
 		"Simple File System",
 		EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID,
 	},

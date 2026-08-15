@@ -789,6 +789,27 @@ struct efi_block_io {
 	efi_status_t (EFIAPI *flush_blocks)(struct efi_block_io *this);
 };
 
+#define EFI_ERASE_BLOCK_PROTOCOL_GUID \
+	EFI_GUID(0x95a9a93e, 0xa86e, 0x4926, \
+		 0xaa, 0xef, 0x99, 0x18, 0xe7, 0x72, 0xd9, 0x87)
+
+#define EFI_ERASE_BLOCK_PROTOCOL_REVISION ((2ULL << 16) | (60ULL))
+
+struct efi_erase_block_token {
+	struct efi_event *event;
+	efi_status_t transaction_status;
+};
+
+struct efi_erase_block_protocol {
+	u64 revision;
+	u32 erase_length_granularity;
+	efi_status_t (EFIAPI *erase_blocks)(
+			struct efi_erase_block_protocol *this,
+			u32 media_id, u64 lba,
+			struct efi_erase_block_token *token,
+			efi_uintn_t size);
+};
+
 struct simple_text_output_mode {
 	s32 max_mode;
 	s32 mode;
