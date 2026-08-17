@@ -14,6 +14,7 @@
 const efi_guid_t gbl_efi_os_config_guid =
 	GBL_EFI_OS_CONFIGURATION_PROTOCOL_GUID;
 
+#ifdef CONFIG_ANDROID_PERSISTENT_RAW_DISK
 static efi_status_t
 bootconfig_load_from_persistent_disk_device(char *fixup,
 					    size_t *fixup_buffer_size)
@@ -24,14 +25,15 @@ bootconfig_load_from_persistent_disk_device(char *fixup,
 	const char *data = NULL;
 	size_t len;
 	int ret = 0;
-	char devnum_str[3];
+	char devnum_str[12];
 	const char *slot_suffix = "";
 	static const char *const requested_partitions[] = {
 		ANDROID_PARTITION_BOOTCONFIG, NULL
 	};
 	efi_status_t status = EFI_SUCCESS;
 
-	sprintf(devnum_str, "%d", CONFIG_ANDROID_PERSISTENT_RAW_DISK_DEVICE);
+	snprintf(devnum_str, sizeof(devnum_str), "%d",
+		 CONFIG_ANDROID_PERSISTENT_RAW_DISK_DEVICE);
 	ops = avb_ops_alloc("virtio", devnum_str);
 	if (!ops) {
 		printf("Failed to allocate AVB ops for persistent disk\n");
@@ -48,8 +50,11 @@ bootconfig_load_from_persistent_disk_device(char *fixup,
 
 	for (int i = 0; i < avb_verify_data->num_loaded_partitions; i++) {
 		AvbPartitionData *p = &avb_verify_data->loaded_partitions[i];
-		if (!strcmp(ANDROID_PARTITION_BOOTCONFIG, p->partition_name))
+		if (p->partition_name &&
+		    !strcmp(ANDROID_PARTITION_BOOTCONFIG, p->partition_name)) {
 			avb_bootconfig_data = p;
+			break;
+		}
 	}
 	if (!avb_bootconfig_data) {
 		printf("Failed to verify bootconfig partition from persistent disk\n");
@@ -78,6 +83,7 @@ out:
 
 	return status;
 }
+#endif
 
 static efi_status_t EFIAPI fixup_bootconfig(
 	struct gbl_efi_os_configuration_protocol *self, size_t bootconfig_size,
@@ -89,14 +95,15 @@ static efi_status_t EFIAPI fixup_bootconfig(
 	if (!self || !bootconfig || !fixup_buffer_size || !fixup)
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 
-	if (IS_ENABLED(CONFIG_ANDROID_PERSISTENT_RAW_DISK_DEVICE))
-		return EFI_EXIT(bootconfig_load_from_persistent_disk_device(
-			fixup, fixup_buffer_size));
-
-	// No fixup needed, set fixup_buffer_size to 0
+#ifdef CONFIG_ANDROID_PERSISTENT_RAW_DISK
+	return EFI_EXIT(bootconfig_load_from_persistent_disk_device(fixup,
+								    fixup_buffer_size));
+#else
+	/* No fixup needed, set fixup_buffer_size to 0 */
 	*fixup_buffer_size = 0;
 
 	return EFI_EXIT(EFI_SUCCESS);
+#endif
 }
 
 static efi_status_t EFIAPI select_device_trees(
