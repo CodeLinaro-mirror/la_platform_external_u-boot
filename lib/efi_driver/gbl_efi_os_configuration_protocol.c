@@ -7,12 +7,14 @@
 #include <gbl_efi_os_configuration.h>
 #include <efi_loader.h>
 #include <efi.h>
+#include <linux/string.h>
 
 #define ANDROID_PARTITION_BOOTCONFIG "bootconfig"
 
 const efi_guid_t gbl_efi_os_config_guid =
 	GBL_EFI_OS_CONFIGURATION_PROTOCOL_GUID;
 
+#ifdef CONFIG_ANDROID_PERSISTENT_RAW_DISK
 static efi_status_t
 bootconfig_load_from_persistent_disk_device(char *fixup,
 					    size_t *fixup_buffer_size)
@@ -20,44 +22,68 @@ bootconfig_load_from_persistent_disk_device(char *fixup,
 	AvbSlotVerifyData *avb_verify_data = NULL;
 	AvbPartitionData *avb_bootconfig_data = NULL;
 	struct AvbOps *ops = NULL;
+	const char *data = NULL;
+	size_t len;
 	int ret = 0;
-	char devnum_str[3];
+	char devnum_str[12];
 	const char *slot_suffix = "";
 	static const char *const requested_partitions[] = {
 		ANDROID_PARTITION_BOOTCONFIG, NULL
 	};
+	efi_status_t status = EFI_SUCCESS;
 
-	sprintf(devnum_str, "%d", CONFIG_ANDROID_PERSISTENT_RAW_DISK_DEVICE);
+	snprintf(devnum_str, sizeof(devnum_str), "%d",
+		 CONFIG_ANDROID_PERSISTENT_RAW_DISK_DEVICE);
 	ops = avb_ops_alloc("virtio", devnum_str);
+	if (!ops) {
+		printf("Failed to allocate AVB ops for persistent disk\n");
+		return EFI_OUT_OF_RESOURCES;
+	}
 
 	ret = avb_verify_partitions(ops, slot_suffix, requested_partitions,
 				    &avb_verify_data, NULL);
 	if (ret != CMD_RET_SUCCESS) {
 		printf("Failed to verify bootconfig partition from persistent disk\n");
-		return EFI_LOAD_ERROR;
+		status = EFI_LOAD_ERROR;
+		goto out;
 	}
 
 	for (int i = 0; i < avb_verify_data->num_loaded_partitions; i++) {
 		AvbPartitionData *p = &avb_verify_data->loaded_partitions[i];
-		if (!strcmp(ANDROID_PARTITION_BOOTCONFIG, p->partition_name))
+		if (p->partition_name &&
+		    !strcmp(ANDROID_PARTITION_BOOTCONFIG, p->partition_name)) {
 			avb_bootconfig_data = p;
+			break;
+		}
 	}
 	if (!avb_bootconfig_data) {
 		printf("Failed to verify bootconfig partition from persistent disk\n");
-		return EFI_LOAD_ERROR;
+		status = EFI_LOAD_ERROR;
+		goto out;
 	}
 
-	if (avb_bootconfig_data->data_size > *fixup_buffer_size) {
+	data = (const char *)avb_bootconfig_data->data;
+	len = strnlen(data, avb_bootconfig_data->data_size);
+
+	if (len > *fixup_buffer_size) {
 		printf("Buffer too small for bootconfig\n");
-		*fixup_buffer_size = avb_bootconfig_data->data_size;
-		return EFI_BUFFER_TOO_SMALL;
+		*fixup_buffer_size = len;
+		status = EFI_BUFFER_TOO_SMALL;
+		goto out;
 	}
 
-	*fixup_buffer_size = strlen(avb_bootconfig_data->data);
-	memcpy(fixup, avb_bootconfig_data->data, *fixup_buffer_size);
+	memcpy(fixup, data, len);
+	*fixup_buffer_size = len;
 
-	return EFI_SUCCESS;
+out:
+	if (avb_verify_data)
+		avb_slot_verify_data_free(avb_verify_data);
+	if (ops)
+		avb_ops_free(ops);
+
+	return status;
 }
+#endif
 
 static efi_status_t EFIAPI fixup_bootconfig(
 	struct gbl_efi_os_configuration_protocol *self, size_t bootconfig_size,
@@ -69,14 +95,15 @@ static efi_status_t EFIAPI fixup_bootconfig(
 	if (!self || !bootconfig || !fixup_buffer_size || !fixup)
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 
-	if (IS_ENABLED(CONFIG_ANDROID_PERSISTENT_RAW_DISK_DEVICE))
-		return EFI_EXIT(bootconfig_load_from_persistent_disk_device(
-			fixup, fixup_buffer_size));
-
-	// No fixup needed, set fixup_buffer_size to 0
+#ifdef CONFIG_ANDROID_PERSISTENT_RAW_DISK
+	return EFI_EXIT(bootconfig_load_from_persistent_disk_device(fixup,
+								    fixup_buffer_size));
+#else
+	/* No fixup needed, set fixup_buffer_size to 0 */
 	*fixup_buffer_size = 0;
 
 	return EFI_EXIT(EFI_SUCCESS);
+#endif
 }
 
 static efi_status_t EFIAPI select_device_trees(
