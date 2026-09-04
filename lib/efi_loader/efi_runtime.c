@@ -551,7 +551,9 @@ static bool efi_is_runtime_service_pointer(void *p)
 	return (p >= (void *)&efi_runtime_services.get_time &&
 		p <= (void *)&efi_runtime_services.query_variable_info) ||
 	       p == (void *)&efi_events.prev ||
-	       p == (void *)&efi_events.next;
+	       p == (void *)&efi_events.next ||
+	       p == (void *)&systab.fw_vendor ||
+	       p == (void *)&systab.runtime;
 }
 
 /**
@@ -887,14 +889,21 @@ static efi_status_t EFIAPI efi_set_virtual_address_map(
 				*lmmio->ptr = (void *)new_addr;
 			}
 		}
-		if ((map_start <= (uintptr_t)systab.tables) &&
-		    (map_end >= (uintptr_t)systab.tables)) {
-			char *ptr = (char *)systab.tables;
-
-			ptr += off;
-			systab.tables = (struct efi_configuration_table *)ptr;
+#define EFI_RELOCATE_POINTER(p) \
+		if ((map_start <= (uintptr_t)(p)) && \
+		    (map_end >= (uintptr_t)(p))) { \
+			char *ptr = (char *)(p); \
+			(p) = (void *)(ptr + off); \
 		}
+
+		EFI_RELOCATE_POINTER(systab.fw_vendor);
+		EFI_RELOCATE_POINTER(systab.runtime);
+		EFI_RELOCATE_POINTER(systab.tables);
+#undef EFI_RELOCATE_POINTER
 	}
+
+	/* Update CRC32 for system table */
+	efi_update_table_header_crc32(&systab.hdr);
 
 	/* Relocate the runtime. See TODO above */
 	for (i = 0; i < n; i++) {
