@@ -7,6 +7,7 @@
 #include <lmb.h>
 #include <asm/e820.h>
 #include <asm/global_data.h>
+#include <linux/sizes.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -42,10 +43,14 @@ void efi_add_known_memory(void)
 {
 	struct e820_entry e820[E820MAX];
 	unsigned int i, num;
-	u64 start;
+	u64 start, end, ram_top;
 	int type;
 
 	num = install_e820_map(ARRAY_SIZE(e820), e820);
+
+	ram_top = (u64)gd->ram_top & ~EFI_PAGE_MASK;
+	if (!ram_top)
+		ram_top = SZ_4G;
 
 	for (i = 0; i < num; ++i) {
 		start = e820[i].addr;
@@ -69,8 +74,22 @@ void efi_add_known_memory(void)
 			break;
 		}
 
-		if (type != EFI_CONVENTIONAL_MEMORY)
+		if (type == EFI_CONVENTIONAL_MEMORY) {
+			/*
+			 * RAM up to ram_top is added by the LMB module. U-Boot
+			 * does not use RAM above ram_top. Declare it as already
+			 * occupied by firmware so that it is still passed to
+			 * the OS.
+			 */
+			end = (start + e820[i].size) & ~EFI_PAGE_MASK;
+			start = max((start + EFI_PAGE_MASK) & ~EFI_PAGE_MASK,
+				    ram_top);
+			if (start < end)
+				efi_add_memory_map(start, end - start,
+						   EFI_BOOT_SERVICES_DATA);
+		} else {
 			efi_add_memory_map(start, e820[i].size, type);
+		}
 	}
 }
 #endif /* CONFIG_IS_ENABLED(EFI_LOADER) */
