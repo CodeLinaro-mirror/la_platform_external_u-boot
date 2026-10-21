@@ -8,6 +8,14 @@ config GBL_EFI_BOOT_CONTROL_PROTOCOL
 	  marking boot attempts, changing the currently active slot,
 	  and querying metadata about boot slots.
 
+config GBL_EFI_BOOT_MEMORY_PROTOCOL
+	bool "Include GBL Boot Memory protocol"
+	depends on EFI_LOADER
+	help
+	  Include the driver for the custom GBL Boot Memory protocol.
+	  This protocol provides GBL with designated boot and fastboot
+	  buffers.
+
 config GBL_EFI_AVB_PROTOCOL
 	bool "Include GBL Android Verified Boot protocol"
 	depends on EFI_LOADER
