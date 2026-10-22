@@ -11,6 +11,7 @@
 #include <efi_driver.h>
 #include <efi_dt_fixup_cf.h>
 #include <gbl_efi_boot_control_protocol.h>
+#include <gbl_efi_boot_memory_protocol.h>
 #include <gbl_efi_avb_protocol.h>
 #include <gbl_efi_avf_protocol.h>
 #include <gbl_efi_fastboot_protocol.h>
@@ -382,6 +383,14 @@ efi_status_t efi_init_obj_list(void)
 		ret = gbl_efi_boot_control_register();
 		if (ret != EFI_SUCCESS) {
 			log_err("GBL_EFI_BOOT_CONTROL_PROTOCOL initialization error\n");
+			goto out;
+		}
+	}
+
+	if (IS_ENABLED(CONFIG_GBL_EFI_BOOT_MEMORY_PROTOCOL)) {
+		ret = gbl_efi_boot_memory_register();
+		if (ret != EFI_SUCCESS) {
+			log_err("GBL_EFI_BOOT_MEMORY_PROTOCOL initialization error\n");
 			goto out;
 		}
 	}
