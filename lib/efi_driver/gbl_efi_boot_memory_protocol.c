@@ -26,7 +26,7 @@ static struct gbl_boot_buf gbl_boot_bufs[] = {
 		.type = EFI_LOADER_DATA,
 	},
 	[GBL_EFI_BOOT_BUFFER_TYPE_KERNEL] = {
-		.size = 86 * SZ_1M,
+		.size = SZ_128M,
 		.align = SZ_2M,
 		.type = EFI_LOADER_DATA,
 	},
