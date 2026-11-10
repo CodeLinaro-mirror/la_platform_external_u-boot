@@ -21,24 +21,25 @@
 // args: An array of NULL-terminated strings that contains the variable name
 //       followed by additional arguments if any.
 // val: A NULL-terminated string representing the value.
-typedef void (*get_var_all_callback)(void *context, size_t num_args,
-				     const char *const *args, const char *val);
+typedef void (EFIAPI *get_var_all_callback)(void *context, size_t num_args,
+					    const char *const *args,
+					    const char *val);
 
-typedef enum {
+enum gbl_efi_fastboot_message_type {
 	GBL_EFI_FASTBOOT_MESSAGE_TYPE_OKAY = 0,
 	GBL_EFI_FASTBOOT_MESSAGE_TYPE_FAIL,
 	GBL_EFI_FASTBOOT_MESSAGE_TYPE_INFO,
-} gbl_efi_fastboot_message_type;
+};
 
-typedef efi_status_t (*fastboot_message_sender)(
-	void *context, gbl_efi_fastboot_message_type msg_type, size_t msg_len,
-	const char *msg);
+typedef efi_status_t (EFIAPI *fastboot_message_sender)(
+	void *context, u32 msg_type, /* enum gbl_efi_fastboot_message_type */
+	size_t msg_len, const char *msg);
 
-typedef enum {
+enum gbl_efi_fastboot_command_exec_result {
 	GBL_EFI_FASTBOOT_COMMAND_EXEC_RESULT_PROHIBITED = 0,
 	GBL_EFI_FASTBOOT_COMMAND_EXEC_RESULT_DEFAULT_IMPL,
 	GBL_EFI_FASTBOOT_COMMAND_EXEC_RESULT_CUSTOM_IMPL,
-} gbl_efi_fastboot_command_exec_result;
+};
 
 extern const efi_guid_t gbl_efi_fastboot_guid;
 
@@ -74,7 +75,7 @@ struct gbl_efi_fastboot_protocol {
 		/* in */ size_t download_buffer_size,
 		/* in */ size_t download_buffer_used_size,
 		/* in */ u8 *download_buffer,
-		/* out */ gbl_efi_fastboot_command_exec_result *implementation,
+		/* out */ u32 *implementation, /* enum gbl_efi_fastboot_command_exec_result */
 		/* in */ fastboot_message_sender sender,
 		/* in */ void *context);
 

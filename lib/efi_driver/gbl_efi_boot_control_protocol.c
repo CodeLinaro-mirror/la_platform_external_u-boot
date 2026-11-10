@@ -336,8 +336,7 @@ set_active_slot(struct gbl_efi_boot_control_protocol *self, u8 idx)
 }
 
 static efi_status_t EFIAPI
-get_one_shot_boot_mode(struct gbl_efi_boot_control_protocol *self,
-		       enum gbl_efi_one_shot_boot_mode *mode)
+get_one_shot_boot_mode(struct gbl_efi_boot_control_protocol *self, u32 *mode)
 {
 	EFI_ENTRY("%p, %p", self, mode);
 	if (self != &gbl_efi_slot_proto || !mode) {

@@ -12,12 +12,12 @@
 
 extern const efi_guid_t gbl_efi_fastboot_transport_guid;
 
-typedef enum {
+enum gbl_efi_fastboot_rx_mode {
 	// Single packet receive mode
 	GBL_EFI_FASTBOOT_RX_MODE_SINGLE_PACKET = 0,
 	// Fixed length receive mode
 	GBL_EFI_FASTBOOT_RX_MODE_FIXED_LENGTH = 1,
-} gbl_efi_fastboot_rx_mode;
+};
 
 struct gbl_efi_fastboot_transport_protocol {
 	// Revision of the protocol supported.
@@ -30,7 +30,8 @@ struct gbl_efi_fastboot_transport_protocol {
 		struct gbl_efi_fastboot_transport_protocol *this);
 	efi_status_t(EFIAPI *receive)(
 		struct gbl_efi_fastboot_transport_protocol *this,
-		size_t *bufsize, void *buf, gbl_efi_fastboot_rx_mode mode);
+		size_t *bufsize, void *buf,
+		u32 mode); /* enum gbl_efi_fastboot_rx_mode */
 	efi_status_t(EFIAPI *send)(
 		struct gbl_efi_fastboot_transport_protocol *this,
 		size_t *bufsize, const void *buf);

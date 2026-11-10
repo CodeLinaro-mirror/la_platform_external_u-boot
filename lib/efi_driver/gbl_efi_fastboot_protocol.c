@@ -107,8 +107,7 @@ static efi_status_t EFIAPI
 command_exec(struct gbl_efi_fastboot_protocol *this, size_t num_args,
 	     const char *const *args, size_t download_buffer_size,
 	     size_t download_buffer_used_size, u8 *download_buffer,
-	     gbl_efi_fastboot_command_exec_result *implementation,
-	     fastboot_message_sender sender, void *ctx)
+	     u32 *implementation, fastboot_message_sender sender, void *ctx)
 {
 	EFI_ENTRY("%p, %zu, %p, %zu, %zu, %p, %p, %p, %p", this, num_args, args,
 		  download_buffer_size, download_buffer_used_size,

@@ -64,7 +64,7 @@ static bool gbl_loads_pvmfw(void)
 
 static efi_status_t EFIAPI get_partition_buffer(
 	struct gbl_efi_boot_memory_protocol *self, const char *base_name,
-	size_t *size, void **addr, enum gbl_efi_partition_buffer_flag *flag)
+	size_t *size, void **addr, u32 *flag)
 {
 	EFI_ENTRY("%p, %p, %p, %p, %p", self, base_name, size, addr, flag);
 
@@ -90,8 +90,8 @@ static efi_status_t EFIAPI sync_partition_buffer(
 }
 
 static efi_status_t EFIAPI get_boot_buffer(
-	struct gbl_efi_boot_memory_protocol *self,
-	enum gbl_efi_boot_buffer_type buf_type, size_t *size, void **addr)
+	struct gbl_efi_boot_memory_protocol *self, u32 buf_type, size_t *size,
+	void **addr)
 {
 	struct gbl_boot_buf *buf;
 
@@ -103,7 +103,7 @@ static efi_status_t EFIAPI get_boot_buffer(
 	*size = 0;
 	*addr = NULL;
 
-	if ((u32)buf_type >= ARRAY_SIZE(gbl_boot_bufs))
+	if (buf_type >= ARRAY_SIZE(gbl_boot_bufs))
 		return EFI_EXIT(EFI_NOT_FOUND);
 
 	if (buf_type == GBL_EFI_BOOT_BUFFER_TYPE_PVMFW_DATA &&

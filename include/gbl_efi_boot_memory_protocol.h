@@ -33,7 +33,7 @@ struct gbl_efi_boot_memory_protocol {
 		/* in */ const char *base_name,
 		/* out */ size_t *size,
 		/* out */ void **addr,
-		/* out */ enum gbl_efi_partition_buffer_flag *flag);
+		/* out */ u32 *flag); /* enum gbl_efi_partition_buffer_flag */
 
 	efi_status_t(EFIAPI *sync_partition_buffer)(
 		/* in */ struct gbl_efi_boot_memory_protocol *self,
@@ -41,7 +41,7 @@ struct gbl_efi_boot_memory_protocol {
 
 	efi_status_t(EFIAPI *get_boot_buffer)(
 		/* in */ struct gbl_efi_boot_memory_protocol *self,
-		/* in */ enum gbl_efi_boot_buffer_type buf_type,
+		/* in */ u32 buf_type, /* enum gbl_efi_boot_buffer_type */
 		/* out */ size_t *size,
 		/* out */ void **addr);
 };

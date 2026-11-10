@@ -55,8 +55,7 @@ read_device_status(struct gbl_efi_avb_protocol *this,
 static efi_status_t EFIAPI validate_vbmeta_public_key(
 	struct gbl_efi_avb_protocol *this, size_t public_key_length,
 	const u8 *public_key_data, size_t public_key_metadata_length,
-	const u8 *public_key_metadata,
-	gbl_efi_avb_key_validation_status *validation_status)
+	const u8 *public_key_metadata, u32 *validation_status)
 {
 	EFI_ENTRY("%p, %zu, %p, %zu, %p, %p", this, public_key_length,
 		  public_key_data, public_key_metadata_length,
@@ -144,8 +143,7 @@ handle_verification_result(struct gbl_efi_avb_protocol *this,
 }
 
 static efi_status_t EFIAPI write_lock_state(struct gbl_efi_avb_protocol *this,
-					    gbl_efi_avb_lock_type type,
-					    gbl_efi_avb_lock_state state)
+					    u8 type, u8 state)
 {
 	EFI_ENTRY("%p, %u, %u", this, type, state);
 	if (this != &gbl_efi_avb_proto) {

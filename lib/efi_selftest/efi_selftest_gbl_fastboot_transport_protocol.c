@@ -29,8 +29,7 @@ static int test_interactive_serial(void)
 
 	char buf[32];
 	size_t bufsize = sizeof(buf);
-	const gbl_efi_fastboot_rx_mode mode =
-		GBL_EFI_FASTBOOT_RX_MODE_SINGLE_PACKET;
+	const u32 mode = GBL_EFI_FASTBOOT_RX_MODE_SINGLE_PACKET;
 	res = protocol->receive(protocol, &bufsize, NULL, mode);
 	if (res != EFI_INVALID_PARAMETER) {
 		efi_st_error(

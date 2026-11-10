@@ -116,7 +116,7 @@ static efi_status_t process_key(int key, size_t *bufsize, void *buf)
 
 static efi_status_t EFIAPI
 receive(struct gbl_efi_fastboot_transport_protocol *this, size_t *bufsize,
-	void *buf, gbl_efi_fastboot_rx_mode mode)
+	void *buf, u32 mode)
 {
 	struct membuff *mb = &ctx.mb;
 	EFI_ENTRY_NO_LOG("%p, %p, %p, %u", this, bufsize, buf, mode);

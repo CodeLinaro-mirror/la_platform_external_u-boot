@@ -26,8 +26,10 @@ enum gbl_efi_one_shot_boot_mode {
 struct gbl_efi_slot_info {
 	/* One UTF-8 encoded single character */
 	u32 suffix;
-	/* Any value other than those explicitly enumerated in EFI_UNBOOTABLE_REASON
-	 will be interpreted as UNKNOWN_REASON. */
+	/*
+	 * enum gbl_efi_unbootable_reason. Any value not listed there is
+	 * interpreted as GBL_EFI_UNBOOTABLE_REASON_UNKNOWN_REASON.
+	 */
 	u8 unbootable_reason;
 	u8 priority;
 	/* Number of remaining tries to attempt to boot the slot */
@@ -68,7 +70,7 @@ struct gbl_efi_boot_control_protocol {
 	/* Boot control methods */
 	efi_status_t(EFIAPI *get_one_shot_boot_mode)(
 		struct gbl_efi_boot_control_protocol *self,
-		/* out */ enum gbl_efi_one_shot_boot_mode *mode);
+		/* out */ u32 *mode); /* enum gbl_efi_one_shot_boot_mode */
 	efi_status_t(EFIAPI *handle_loaded_os)(
 		struct gbl_efi_boot_control_protocol *self,
 		/* in */ const struct gbl_efi_loaded_os *os);

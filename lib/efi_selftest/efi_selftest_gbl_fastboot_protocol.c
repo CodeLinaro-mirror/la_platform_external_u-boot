@@ -11,8 +11,8 @@
 static struct efi_boot_services *boot_services;
 static struct gbl_efi_fastboot_protocol *protocol;
 
-void cb_noop(void *context, size_t num_args, const char *const *args,
-	     const char *val)
+static void EFIAPI cb_noop(void *context, size_t num_args,
+			   const char *const *args, const char *val)
 {
 }
 

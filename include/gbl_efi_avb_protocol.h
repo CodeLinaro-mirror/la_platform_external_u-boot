@@ -28,11 +28,11 @@ typedef u64 gbl_efi_avb_device_status;
 #define GBL_EFI_AVB_DEVICE_STATUS_UNLOCKED_CRITICAL (1ULL << 2)
 #define GBL_EFI_AVB_DEVICE_STATUS_UNLOCKABLE (1ULL << 3)
 
-typedef enum {
+enum gbl_efi_avb_key_validation_status {
 	GBL_EFI_AVB_KEY_VALIDATION_STATUS_INVALID = 0,
 	GBL_EFI_AVB_KEY_VALIDATION_STATUS_VALID_CUSTOM_KEY,
 	GBL_EFI_AVB_KEY_VALIDATION_STATUS_VALID,
-} gbl_efi_avb_key_validation_status;
+};
 
 typedef u64 gbl_efi_avb_boot_color_flags;
 #define GBL_EFI_AVB_BOOT_COLOR_RED (1ULL << 0)
@@ -61,18 +61,18 @@ typedef struct {
 	const gbl_efi_avb_loaded_partition *partitions;
 	size_t num_properties;
 	const gbl_efi_avb_property *properties;
-	u32 reserved[8];
+	u64 reserved[8];
 } gbl_efi_avb_verification_result;
 
-typedef enum {
+enum gbl_efi_avb_lock_type {
 	GBL_EFI_AVB_LOCK_TYPE_DEVICE = 0,
 	GBL_EFI_AVB_LOCK_TYPE_CRITICAL,
-} gbl_efi_avb_lock_type;
+};
 
-typedef enum {
+enum gbl_efi_avb_lock_state {
 	GBL_EFI_AVB_LOCK_STATE_UNLOCKED = 0,
 	GBL_EFI_AVB_LOCK_STATE_LOCKED,
-} gbl_efi_avb_lock_state;
+};
 
 extern const efi_guid_t gbl_efi_avb_guid;
 
@@ -94,7 +94,7 @@ struct gbl_efi_avb_protocol {
 		/* in */ const u8 *public_key_data,
 		/* in */ size_t public_key_metadata_length,
 		/* in */ const u8 *public_key_metadata,
-		/* out */ gbl_efi_avb_key_validation_status *validation_status);
+		/* out */ u32 *validation_status); /* enum gbl_efi_avb_key_validation_status */
 
 	efi_status_t(EFIAPI *read_rollback_index)(
 		/* in */ struct gbl_efi_avb_protocol *self,
@@ -124,8 +124,8 @@ struct gbl_efi_avb_protocol {
 
 	efi_status_t(EFIAPI *write_lock_state)(
 		/* in */ struct gbl_efi_avb_protocol *self,
-		/* in */ gbl_efi_avb_lock_type type,
-		/* in */ gbl_efi_avb_lock_state state);
+		/* in */ u8 type, /* enum gbl_efi_avb_lock_type */
+		/* in */ u8 state); /* enum gbl_efi_avb_lock_state */
 
 	efi_status_t(EFIAPI *factory_data_reset)(
 		/* in */ struct gbl_efi_avb_protocol *self);

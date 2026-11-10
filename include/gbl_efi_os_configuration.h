@@ -33,8 +33,8 @@ enum gbl_efi_device_tree_source {
 };
 
 struct gbl_efi_device_tree_metadata {
-	u32 source;
-	u32 type;
+	u32 source; /* enum gbl_efi_device_tree_source */
+	u32 type; /* enum gbl_efi_device_tree_type */
 	u32 id;
 	u32 rev;
 	size_t custom_size;
