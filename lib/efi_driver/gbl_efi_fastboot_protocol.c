@@ -57,6 +57,8 @@ static efi_status_t EFIAPI get_var(struct gbl_efi_fastboot_protocol *this,
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
+	bool known_name = false;
+
 	for (struct fastboot_var *var = &vars[0]; var->val; var++) {
 		if (args_match_var(fb_args, num_args, var)) {
 			size_t val_len = strlen(var->val);
@@ -70,9 +72,12 @@ static efi_status_t EFIAPI get_var(struct gbl_efi_fastboot_protocol *this,
 			*bufsize = val_len;
 			return EFI_EXIT(ret);
 		}
+		if (num_args > 0 && !strcmp(fb_args[0], var->args[0]))
+			known_name = true;
 	}
 
-	return EFI_EXIT(EFI_NOT_FOUND);
+	/* A known variable with unknown arguments is EFI_UNSUPPORTED. */
+	return EFI_EXIT(known_name ? EFI_UNSUPPORTED : EFI_NOT_FOUND);
 }
 
 static efi_status_t EFIAPI get_var_all(struct gbl_efi_fastboot_protocol *this,
@@ -84,7 +89,7 @@ static efi_status_t EFIAPI get_var_all(struct gbl_efi_fastboot_protocol *this,
 	}
 
 	for (struct fastboot_var *var = &vars[0]; var->args; var++) {
-		cb(ctx, args_len(var), var->args, var->val);
+		EFI_CALL_VOID(cb(ctx, args_len(var), var->args, var->val));
 	}
 
 	return EFI_EXIT(EFI_SUCCESS);
@@ -100,7 +105,10 @@ static efi_status_t EFIAPI get_staged(struct gbl_efi_fastboot_protocol *this,
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	return EFI_EXIT(EFI_UNSUPPORTED);
+	/* No staged data. */
+	*bufsize = 0;
+	*buffer_remains = 0;
+	return EFI_EXIT(EFI_SUCCESS);
 }
 
 static efi_status_t EFIAPI
@@ -114,7 +122,8 @@ command_exec(struct gbl_efi_fastboot_protocol *this, size_t num_args,
 		  download_buffer, implementation, sender, ctx);
 	if (this != &gbl_efi_fastboot_proto || args == NULL ||
 	    implementation == NULL || sender == NULL ||
-	    (download_buffer_size > 0 && download_buffer == NULL)) {
+	    (!download_buffer &&
+	     (download_buffer_size > 0 || download_buffer_used_size > 0))) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 

@@ -39,11 +39,15 @@ read_device_status(struct gbl_efi_avb_protocol *this,
 	*status_flags = 0;
 
 	int locked = oemlock_is_locked();
+	int allowed = oemlock_is_allowed();
+
+	if (locked < 0 || allowed < 0)
+		return EFI_EXIT(EFI_DEVICE_ERROR);
+
 	if (locked == 0) {
 		*status_flags |= GBL_EFI_AVB_DEVICE_STATUS_UNLOCKED;
 	}
 
-	int allowed = oemlock_is_allowed();
 	if (allowed == 1) {
 		*status_flags |= GBL_EFI_AVB_DEVICE_STATUS_UNLOCKABLE;
 	}

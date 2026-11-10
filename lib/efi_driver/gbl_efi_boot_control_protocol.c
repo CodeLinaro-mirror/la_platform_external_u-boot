@@ -43,21 +43,27 @@ u32 calculate_metadata_checksum(const struct bootloader_control *data)
 static efi_status_t ensure_buffer_initialized(void)
 {
 	if (!block_device) {
-		block_device = blk_get_dev(device_name, 0);
-		if (!block_device) {
+		struct blk_desc *dev = blk_get_dev(device_name, 0);
+		struct disk_partition part;
+
+		if (!dev) {
 			log_err("Failed to get device: %s:0\n", device_name);
 			return EFI_DEVICE_ERROR;
 		}
 
-		if (block_device->blksz < sizeof(android_metadata))
+		if (dev->blksz < sizeof(android_metadata))
 			return EFI_BUFFER_TOO_SMALL;
 
-		if (part_get_info_by_name(block_device, ab_partition_name,
-					  &ab_partition) < 1) {
+		if (part_get_info_by_name(dev, ab_partition_name, &part) < 1 ||
+		    !part.blksz) {
 			log_err("No partition '%s' on device '%s:0'\n",
 				ab_partition_name, device_name);
 			return EFI_DEVICE_ERROR;
 		}
+
+		/* Only cache the device once it is fully set up. */
+		ab_partition = part;
+		block_device = dev;
 	}
 
 	if (!buffer) {
@@ -135,18 +141,25 @@ static efi_status_t load_boot_data(void)
 			buffer);
 
 	if (res != 1) {
-		log_err("Failed to read AB metadata: %l\n", res);
+		log_err("Failed to read AB metadata: %ld\n", res);
 		return EFI_DEVICE_ERROR;
 	}
 
-	data_loaded = true;
 	memcpy(&android_metadata, buffer + offset.remaining_bytes,
 	       sizeof(android_metadata));
 	if (calculate_metadata_checksum(&android_metadata) !=
 	    android_metadata.crc32_le) {
-		return initialize_misc_partition(offset);
+		efi_status_t ret = initialize_misc_partition(offset);
+
+		if (ret != EFI_SUCCESS)
+			return ret;
 	}
 
+	/* Safety check: limit the number of slots. */
+	if (android_metadata.nb_slot > ARRAY_SIZE(android_metadata.slot_info))
+		android_metadata.nb_slot = ARRAY_SIZE(android_metadata.slot_info);
+
+	data_loaded = true;
 	return EFI_SUCCESS;
 }
 
@@ -217,7 +230,7 @@ get_current_slot_idx(struct gbl_efi_boot_control_protocol *self, u8 *idx)
 
 	efi_status_t res = ensure_buffer_initialized();
 	if (res != EFI_SUCCESS)
-		return EFI_EXIT(res);
+		return res;
 
 	res = load_boot_data();
 	if (res != EFI_SUCCESS)
@@ -274,19 +287,17 @@ get_current_slot(struct gbl_efi_boot_control_protocol *self,
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
-static efi_status_t flush_changes(void)
+static efi_status_t flush_changes(struct bootloader_control *metadata)
 {
 	efi_status_t res = ensure_buffer_initialized();
 	if (res != EFI_SUCCESS)
 		return res;
 
-	android_metadata.crc32_le =
-		calculate_metadata_checksum(&android_metadata);
+	metadata->crc32_le = calculate_metadata_checksum(metadata);
 	struct disk_offset offset =
 		byte_offset_to_blocks(2048, ab_partition.blksz);
 	memset(buffer, 0, block_device->blksz);
-	memcpy(buffer + offset.remaining_bytes, &android_metadata,
-	       sizeof(android_metadata));
+	memcpy(buffer + offset.remaining_bytes, metadata, sizeof(*metadata));
 	if (blk_dwrite(block_device, ab_partition.start + offset.blocks, 1,
 		       buffer) != 1) {
 		return EFI_DEVICE_ERROR;
@@ -315,8 +326,11 @@ set_active_slot(struct gbl_efi_boot_control_protocol *self, u8 idx)
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
-	for (int i = 0; i < android_metadata.nb_slot; i++) {
-		struct slot_metadata *slot = &android_metadata.slot_info[i];
+	/* Only update the cached metadata once the change is on disk. */
+	struct bootloader_control metadata = android_metadata;
+
+	for (int i = 0; i < metadata.nb_slot; i++) {
+		struct slot_metadata *slot = &metadata.slot_info[i];
 
 		if (i == idx) {
 			slot->tries_remaining = INITIAL_SLOT_TRIES_REMAINING;
@@ -327,11 +341,12 @@ set_active_slot(struct gbl_efi_boot_control_protocol *self, u8 idx)
 		}
 	}
 
-	res = flush_changes();
+	res = flush_changes(&metadata);
 	if (res != EFI_SUCCESS) {
 		return EFI_EXIT(res);
 	}
 
+	android_metadata = metadata;
 	return EFI_EXIT(EFI_SUCCESS);
 }
 

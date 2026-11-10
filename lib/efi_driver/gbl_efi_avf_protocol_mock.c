@@ -86,7 +86,8 @@ static efi_status_t EFIAPI read_vendor_dice_handover(
 	struct gbl_efi_avf_protocol *this, size_t *handover_size, u8 *handover)
 {
 	EFI_ENTRY("%p, %p, %p", this, handover_size, handover);
-	if (this != &gbl_efi_avf_proto || handover_size == NULL) {
+	if (this != &gbl_efi_avf_proto || !handover_size ||
+	    (*handover_size > 0 && !handover)) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 	size_t required_size = sizeof(dummy_vendor_handover);
@@ -96,9 +97,7 @@ static efi_status_t EFIAPI read_vendor_dice_handover(
 	}
 
 	*handover_size = required_size;
-	if (handover != NULL) {
-		memcpy(handover, dummy_vendor_handover, required_size);
-	}
+	memcpy(handover, dummy_vendor_handover, required_size);
 
 	return EFI_EXIT(EFI_SUCCESS);
 }
@@ -108,7 +107,8 @@ read_secretkeeper_public_key(struct gbl_efi_avf_protocol *this,
 			     size_t *public_key_size, u8 *public_key)
 {
 	EFI_ENTRY("%p, %p, %p", this, public_key_size, public_key);
-	if (this != &gbl_efi_avf_proto || public_key_size == NULL) {
+	if (this != &gbl_efi_avf_proto || !public_key_size ||
+	    (*public_key_size > 0 && !public_key)) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
 
@@ -119,10 +119,7 @@ read_secretkeeper_public_key(struct gbl_efi_avf_protocol *this,
 	}
 
 	*public_key_size = required_size;
-	if (public_key != NULL) {
-		memcpy(public_key, dummy_secretkeeper_public_key,
-		       required_size);
-	}
+	memcpy(public_key, dummy_secretkeeper_public_key, required_size);
 
 	return EFI_EXIT(EFI_SUCCESS);
 }

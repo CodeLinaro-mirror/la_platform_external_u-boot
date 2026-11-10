@@ -50,6 +50,8 @@ start(struct gbl_efi_fastboot_transport_protocol *this)
 	if (this != &gbl_efi_fastboot_transport_interactive_serial_proto) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
+	if (ctx.registered)
+		return EFI_EXIT(EFI_ALREADY_STARTED);
 
 	membuff_init(&ctx.mb, context_inner_buffer, BUFFER_SIZE);
 	cyclic_register(&ctx.cyclic, poll_loop, 100 * 1000 /*100ms*/,
@@ -77,11 +79,18 @@ static efi_status_t EFIAPI stop(struct gbl_efi_fastboot_transport_protocol *this
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
-static void fill_reply(char *s, size_t *bufsize, void *buf)
+static efi_status_t fill_reply(char *s, size_t *bufsize, void *buf)
 {
 	assert(s);
-	*bufsize = min(strlen(s), *bufsize);
-	strncpy((char *)buf, s, *bufsize);
+	size_t len = strlen(s);
+
+	if (len > *bufsize) {
+		*bufsize = len;
+		return EFI_BUFFER_TOO_SMALL;
+	}
+	memcpy(buf, s, len);
+	*bufsize = len;
+	return EFI_SUCCESS;
 }
 
 static efi_status_t process_key(int key, size_t *bufsize, void *buf)
@@ -90,15 +99,15 @@ static efi_status_t process_key(int key, size_t *bufsize, void *buf)
 
 	switch (key) {
 	case 'a': {
-		fill_reply("getvar:all", bufsize, buf);
+		res = fill_reply("getvar:all", bufsize, buf);
 		break;
 	}
 	case 'r': {
-		fill_reply("reboot", bufsize, buf);
+		res = fill_reply("reboot", bufsize, buf);
 		break;
 	}
 	case 'b': {
-		fill_reply("bad:command", bufsize, buf);
+		res = fill_reply("bad:command", bufsize, buf);
 		break;
 	}
 	case 'h':
@@ -124,14 +133,22 @@ receive(struct gbl_efi_fastboot_transport_protocol *this, size_t *bufsize,
 	    bufsize == NULL || (*bufsize > 0 && buf == NULL)) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
+	if (!ctx.registered)
+		return EFI_EXIT_NO_LOG(EFI_NOT_STARTED);
 
 	if (membuff_avail(mb)) {
-		char a;
-		do {
-			a = membuff_getbyte(mb);
-		} while (a == membuff_peekbyte(mb));
+		int key = membuff_peekbyte(mb);
+		efi_status_t res = process_key(key, bufsize, buf);
 
-		efi_status_t res = process_key(a, bufsize, buf);
+		/* Keep the key so that it can be read with a larger buffer. */
+		if (res == EFI_BUFFER_TOO_SMALL)
+			return EFI_EXIT_NO_LOG(res);
+
+		/* Consume the key along with any repeats of it. */
+		do {
+			membuff_getbyte(mb);
+		} while (membuff_peekbyte(mb) == key);
+
 		return EFI_EXIT_NO_LOG(res);
 	}
 
@@ -147,6 +164,8 @@ static efi_status_t EFIAPI send(struct gbl_efi_fastboot_transport_protocol *this
 	    bufsize == NULL || (*bufsize > 0 && buf == NULL)) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
+	if (!ctx.registered)
+		return EFI_EXIT_NO_LOG(EFI_NOT_STARTED);
 
 	if (*bufsize < 4) {
 		log_err("Bad fastboot command length: %zu\n", *bufsize);
@@ -175,6 +194,8 @@ gbl_efi_flush(struct gbl_efi_fastboot_transport_protocol *this)
 	if (this != &gbl_efi_fastboot_transport_interactive_serial_proto) {
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	}
+	if (!ctx.registered)
+		return EFI_EXIT_NO_LOG(EFI_NOT_STARTED);
 
 	return EFI_EXIT_NO_LOG(EFI_SUCCESS);
 }
